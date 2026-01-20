@@ -1,0 +1,8 @@
+- On right of course card h1, show the direct-link so it can be copied/bookmarked
+- Have ability to open a single card if need be: perma-link
+- For Week 1 etc headings, include list of associated tags (from .md collection in that folder)
+- On right of Week 1 etc, include pockit-print icon to open the week in printable format
+- On right of a single card heading, include pockit-print icon - pops up request for number of copies per page and will generate based on that 
+- Front matter or partial for provider detail
+- Pockit logo bottom-left of nav with link to pockit.works
+- 

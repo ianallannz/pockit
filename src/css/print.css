@@ -1,0 +1,5 @@
+
+@media print {
+  body { margin: 2cm; font-family: serif; }
+  article { page-break-after: always; }
+}

@@ -1,0 +1,19 @@
+---
+layout: print-cards.njk
+pagination:
+  data: collections.courseWeeks
+  size: 1
+  alias: cw
+permalink: "courses/{{ cw.provider }}/{{ cw.course }}/materials/week-{{ cw.week }}/print/index.html"
+---
+
+
+<section id="week-{{ cw.week }}">
+  <h1>{{ cw.course }} — Week {{ cw.week }} Print View</h1>
+  {% for h in cw.items %}
+    <article>
+      <h2>{{ h.data.title }}</h2>
+      {{ h.templateContent | safe }}
+    </article>
+  {% endfor %}
+</section>
