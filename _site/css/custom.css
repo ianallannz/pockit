@@ -342,14 +342,6 @@ body.course {
   background-image: radial-gradient(circle, #e5e5e5 1.2px, transparent 1.2px);
   background-size: 24px 24px;
   padding: 64px 0 72px;
-  /* html's own overflow-x: hidden (see custom.css's top-level body/
-     html rules) stops scrollbar/wheel-driven horizontal scroll, but a
-     trackpad's two-finger pan can still drag the page sideways up to
-     the fanned lesson cards' own bleeding edge in at least some
-     browsers — clipping right at the section that actually contains
-     the bleed is the more reliable fix, rather than counting on the
-     document root alone to contain it. */
-  overflow-x: hidden;
 }
 
 .hero-inner {
@@ -496,6 +488,20 @@ body.course {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* html's own overflow-x: hidden (see custom.css's top-level body/
+     html rules) stops scrollbar/wheel-driven horizontal scroll, but a
+     trackpad's two-finger pan can still drag the page sideways up to
+     the fanned lesson cards' own bleeding edge in at least some
+     browsers — clipping right here (rather than on .hero itself, as
+     this used to) is the more reliable fix. Scoped to .hero-image
+     specifically, not .hero, because overflow-x: hidden without an
+     explicit overflow-y forces overflow-y: auto too (a CSS quirk) —
+     on .hero that turned .hero-arrow's own deliberate vertical bleed
+     (it reaches past .hero's own bottom edge into the "Why" section
+     below by design) into an unwanted inner scrollbar. .hero-image
+     only contains the card stack, not the arrow, so it can't trigger
+     that here. */
+  overflow-x: hidden;
 }
 
 /* ── Homepage hero (src/index.njk) ──────────────────────────────────
