@@ -1900,7 +1900,40 @@ body.course {
    flex-start, Book's flex-end, Course's padding-right) since that
    only made sense when the three columns shared one row — each slide
    here stands alone, so everything in it is simply centred. */
+/* Hidden until the grid actually becomes a swipeable row below — see
+   .hp-product-dots itself in the @media (max-width: 640px) block. */
+.hp-product-dots {
+  display: none;
+}
+
 @media (max-width: 640px) {
+  .hp-product-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .hp-product-dot {
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .hp-product-dot:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .hp-product-dot.is-active,
+  .hp-product-dot.is-active:hover {
+    background: var(--brand-green);
+  }
+
   .hp-product-grid {
     display: flex;
     grid-template-columns: none;
