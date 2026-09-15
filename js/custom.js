@@ -193,3 +193,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// Homepage product carousel (Course/Note/Book, src/index.njk) — on phones
+// (see .hp-product-grid's own max-width: 640px rule in custom.css) the
+// grid becomes a horizontally swipeable, scroll-snapped row with no
+// visual cue that there's more to see or where you are in it. These dots
+// above it fill that in, the same "N of M" role as .hp-better-dots but
+// for a plain native scroll instead of a position: sticky track.
+document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.querySelector('.hp-product-grid');
+    const dots = document.querySelectorAll('.hp-product-dot');
+    if (!grid || !dots.length) return;
+
+    function setActive(index) {
+        dots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
+    }
+
+    function onScroll() {
+        if (grid.clientWidth === 0) return;
+        const index = Math.round(grid.scrollLeft / grid.clientWidth);
+        setActive(index);
+    }
+
+    grid.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+
+    dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            const index = Number(dot.dataset.slide);
+            grid.scrollTo({ left: index * grid.clientWidth, behavior: 'smooth' });
+        });
+    });
+});
