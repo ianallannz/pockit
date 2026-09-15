@@ -1,0 +1,146 @@
+/* ── Print (composer) ─────────────────────────────────────────
+   Prints the active lesson's cards, three per A4-landscape page, flush
+   against each other (fewer cuts) and centered on the page. Populated
+   into #print-root just before printing — see buildPrintPages(), hooked
+   to window's beforeprint in course-builder.js.
+
+   style.css applies here too (it has no `media` attribute, so it's
+   already in effect for print) — that's what makes a cloned .card look
+   exactly like its on-screen original with no duplicated styling here.
+   This file only handles page setup and hiding the editing-only chrome
+   that comes along for the ride when a card gets cloned.
+
+   Deliberately plain block flow + break-after:page rather than absolute
+   positioning #print-root over a visibility:hidden copy of the rest of
+   the page (the first version of this file) — that measured as perfectly
+   centered on screen (forcing print.css to apply outside @media print),
+   but real paginated print didn't agree: an absolutely positioned element
+   sitting inside content that's still contributing to the page's normal
+   flow (even invisibly) doesn't reliably line up with Chrome's own
+   per-physical-page boxes once there's more than one page. Actually
+   removing #sidebar/#lesson-title-row/#card-row from layout (display:none,
+   not visibility:hidden) and leaving #print-root as plain in-flow content
+   sidesteps that entirely — the standard, well-supported way to paginate
+   in CSS. */
+
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+body {
+  display: block;
+  height: auto;
+  overflow: visible;
+}
+
+#sidebar,
+#lesson-title-row,
+#card-row,
+#cover-view,
+#profile-btn,
+#profile-panel-backdrop,
+#profile-panel {
+  display: none;
+}
+
+/* Screen-only flex/padding/scroll for the interactive layout — none of it
+   should apply once #print-root is the only thing left inside. */
+#workspace {
+  display: block;
+  padding: 0;
+  overflow: visible;
+  height: auto;
+}
+
+#workspace-inner {
+  display: block;
+  gap: 0;
+}
+
+#print-root { display: block; }
+
+.print-page {
+  width: 297mm;
+  height: 210mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  break-after: page;
+  break-inside: avoid;
+}
+
+.print-page:last-child { break-after: auto; }
+
+/* Browsers skip background colors/images by default when printing (the
+   print dialog's "Background graphics"/"Print backgrounds" toggle, off by
+   default) — fine for page chrome, but several things here are real
+   content drawn as a background rather than a border/foreground: the
+   header punch dot (.card-punch), the grid dots (.card-grid), Task's
+   tint+wave, Key Idea's tint, and anything else a block type adds this
+   way. print-color-adjust exists precisely to let content insist on
+   printing regardless of that toggle — so it does, for everything in a
+   printed card, rather than auditing and re-auditing this list as block
+   types change. */
+.print-page,
+.print-page * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Flush against each other — fewer cuts — unlike the screen strip's own
+   gap between cards. */
+.print-page .card { flex-shrink: 0; }
+
+/* style.css's .card-outline centers an `outline` on each card's own edges
+   (half in, half out) — a trim mark that's correct for one card viewed
+   with a gap around it, but two cards drawn edge-to-edge each straddling
+   the *same* shared boundary is exactly what produces a doubled/blurred
+   line there. Redrawn here as a plain inset border instead (weight/color
+   read back from the --outline-weight/--outline-color custom properties
+   buildCard() sets alongside the outline itself), and only given a left
+   edge on the first card in a page — every other shared boundary is drawn
+   once, by the card to its left, never twice. `!important` because the
+   outline being overridden is set inline, which otherwise outranks any
+   external stylesheet. */
+.print-page .card-outline {
+  outline: none !important;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: var(--outline-color);
+  border-width: var(--outline-weight) var(--outline-weight) var(--outline-weight) 0;
+}
+.print-page .card:first-child .card-outline {
+  border-left-width: var(--outline-weight);
+}
+
+/* Editing-only chrome that comes along when a card is cloned — the exact
+   elements style.css already marks "Screen-only chrome" by comment. None
+   of it belongs on a printed page. */
+.print-page .card-block-grip,
+.print-page .card-block-remove,
+.print-page .card-block-resize,
+.print-page .card-block-add,
+.print-page .card-block-settings,
+.print-page .card-block-image-note,
+.print-page .card-block-image-prompt,
+.print-page .card-block-list-count,
+.print-page .card-block-matrix-toolbar {
+  display: none;
+}
+
+/* Same idea, for the cloned #cover-spread buildPrintCoverPage() builds —
+   its outer border/shadow is designer-only framing (not part of the cover
+   itself), and the panel-name placeholders/drag-to-resize/align-toggle
+   chrome are editing aids with no business on the actual printed page.
+   The dashed lines between panels are left alone: those double as fold
+   lines once this is cut out. */
+.print-page-cover #cover-spread {
+  border: none;
+  box-shadow: none;
+}
+.print-page-cover .cover-panel-label,
+.print-page-cover .cover-text-align-btn,
+.print-page-cover .cover-text-resize {
+  display: none;
+}

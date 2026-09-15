@@ -1,0 +1,21 @@
+---
+pagination:
+  data: shortlinks
+  size: 1
+  alias: link
+permalink: "{{ link.slug }}/index.html"
+eleventyExcludeFromCollections: true
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Redirecting…</title>
+  <meta http-equiv="refresh" content="0;url={{ link.url }}">
+  <link rel="canonical" href="{{ link.url }}">
+  <script>location.replace({{ link.url | dump | safe }});</script>
+</head>
+<body>
+  <p>Redirecting to <a href="{{ link.url }}">{{ link.url }}</a>…</p>
+</body>
+</html>

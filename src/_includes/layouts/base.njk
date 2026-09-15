@@ -8,6 +8,8 @@
     <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon-256x256.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Inter:wght@400;600;700&family=Sora:wght@400;600;700;800&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/custom.css">
     <meta name="theme-color" content="#F4F4F4">
     <!-- SEO basics -->
@@ -29,7 +31,10 @@
 </head>
 
 <body class="{{ page.fileSlug }}">
+    {% include "header.njk" %}
     {{ content | safe }}
+    {% include "footer.njk" %}
+    {% include "modal-contact.njk" %}
 
     <script src="/js/custom.js" defer></script>
 </body>

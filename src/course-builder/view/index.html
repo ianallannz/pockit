@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pockit — Shared course</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono&family=Sora:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700;800&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <!-- Reuses the editor's own stylesheets unmodified — #sidebar/#workspace/
+       #card-strip/.lesson-row/#present-view/#print-root and friends below
+       are deliberately given the SAME ids/classes the editor uses for them
+       (this is a separate document, so there's no collision), purely to
+       inherit their styling and — for print.css in particular — its actual
+       behavior (it hides #sidebar/#lesson-title-row/#card-row by id and
+       leaves #print-root as the only visible content; reusing those ids
+       here means printing already works with zero print.css changes). See
+       css/view.css for what's actually new: the sign-in gate and the
+       pending-invites list, neither of which the editor has a counterpart
+       for. -->
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/print.css" media="print">
+  <link rel="stylesheet" href="css/view.css">
+</head>
+<body>
+
+<!-- ── Sign-in gate ── -->
+<!-- Shown until trySessionRestore()/onAuthStateChange() in view.js finds a
+     session; #view-app below stays hidden until then. Magic-link only,
+     same as the editor's own #sign-in-dialog (see auth.js) — this page
+     calls the exact same signInWithEmail(), so a link sent from here
+     redirects back to this page's own URL (including any ?owner=&course=
+     query string — see openViewerPreview() in course-builder.js), landing
+     signed in with the deep link still intact. -->
+<div id="view-signin">
+  <div id="view-signin-card">
+    <img src="../images/pockit-logo.png" alt="" id="view-signin-logo">
+    <h1>Pockit</h1>
+    <p>Sign in to see courses shared with you.</p>
+    <div class="param-row">
+      <label for="viewSignInEmail">Email</label>
+      <input type="email" id="viewSignInEmail" placeholder="you@example.com">
+    </div>
+    <button id="viewSignInBtn" type="button">Send link</button>
+    <p id="viewSignInStatus"></p>
+  </div>
+</div>
+
+<!-- ── App shell ── -->
+<!-- #sidebar/#workspace below are read-only counterparts of the editor's
+     own — no add/rename/delete/settings anywhere, just selecting what to
+     look at. See view.js's render functions for what populates each. -->
+<div id="view-app" hidden>
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div id="brand">
+        <img src="../images/pockit-logo.png" alt="" id="brand-logo">
+        <div id="brand-text">
+          <h1>Course Builder</h1>
+          <p id="view-subtitle">Shared with you</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shown only for "Preview as viewer" (see openViewerPreview() in
+         course-builder.js) — the owner looking at their own course, not a
+         real invited viewer. Sign out is deliberately hidden alongside
+         #account-status in this mode (see loadEverything() in view.js):
+         it's a genuinely confusing exit here — Supabase's session is
+         shared across tabs via localStorage, so signing out of this
+         preview tab would sign the owner out of their real editor tab
+         too. Close preview just closes this tab (window.close() only
+         works on a script-opened tab, which this always is — it only
+         ever gets opened via openViewerPreview()'s window.open()). -->
+    <div class="param-group no-collapse" id="view-preview-banner" hidden>
+      <h2>Preview</h2>
+      <p>You're viewing this course the way a viewer would see it.</p>
+      <button id="view-preview-close" type="button">Close preview</button>
+    </div>
+
+    <!-- Hidden outright (not just empty) when there's nothing pending, or
+         while previewing (above) — see renderPendingInvites() in view.js.
+         A pending invite can't show its course's title/code (RLS only
+         grants that once accepted — see course-invites.js's own comment
+         on this), so each row is just the inviting detail plus Accept;
+         accepting immediately reloads everything, which is what actually
+         reveals the course. -->
+    <div class="param-group no-collapse" id="view-pending-group" hidden>
+      <h2>Pending viewer invites</h2>
+      <div id="view-pending-list"></div>
+    </div>
+
+    <div class="param-group no-collapse" id="course-group">
+      <h2>Course</h2>
+      <div class="param-row">
+        <select id="view-course-select"></select>
+      </div>
+    </div>
+
+    <div class="param-group no-collapse" id="lesson-group">
+      <h2>Lessons</h2>
+      <div id="lesson-list"></div>
+    </div>
+
+    <div id="account-status">
+      <p id="account-status-label"></p>
+      <button id="account-status-action" type="button">Sign out</button>
+    </div>
+
+    <div id="present-panel-group">
+      <div id="present-actions">
+        <button id="present-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/>
+          </svg>
+          <span>Lesson Presentation</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="print-panel-group">
+      <div id="print-actions">
+        <button id="print-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 8V4h10v4"/>
+            <rect x="4" y="8" width="16" height="8" rx="1"/>
+            <rect x="7" y="13" width="10" height="7" rx="0.5"/>
+          </svg>
+          <span>Print</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="workspace">
+    <div id="workspace-inner">
+      <div id="lesson-title-row">
+        <span id="lesson-title-mark"></span>
+        <input type="text" id="workspaceLessonTitle" readonly>
+      </div>
+      <div id="card-row">
+        <div id="card-strip"></div>
+      </div>
+
+      <!-- Populated just before printing — see buildViewerPrintPages() in
+           view.js, hooked to window's beforeprint. Stays inside
+           #workspace-inner so it inherits --punch-color/--task-tint, both
+           set there by applyCourseTokens() — same reasoning as the
+           editor's own #print-root placement. -->
+      <div id="print-root"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Present ──────────────────────────────────────────────────
+     Identical markup to the editor's own #present-view — see
+     paintPresentSlide() in render-card.js, which both pages call to fill
+     this in. -->
+<div id="present-view" hidden>
+  <button id="present-close" type="button" title="Close (Esc)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <button id="present-prev" type="button" title="Previous (←)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <button id="present-next" type="button" title="Next (→)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div id="present-slide">
+    <div id="present-header">
+      <div id="present-header-left">
+        <div id="present-mark"></div>
+        <div id="present-header-text">
+          <div id="present-lesson"></div>
+          <h1 id="present-title"></h1>
+        </div>
+      </div>
+      <div id="present-count"></div>
+    </div>
+    <div id="present-content"></div>
+    <div id="present-footer">
+      <span id="present-footer-text"></span>
+      <img id="present-logo" src="../images/pockit-logo.png" alt="">
+    </div>
+  </div>
+</div>
+
+<script src="../vendor/qrcode.js"></script>
+<script type="importmap">
+  { "imports": {
+      "js-yaml": "../vendor/js-yaml.mjs",
+      "@supabase/supabase-js": "../vendor/supabase-js.mjs"
+  } }
+</script>
+<script type="module" src="../js/view.js"></script>
+</body>
+</html>

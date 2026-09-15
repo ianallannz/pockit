@@ -3,6 +3,8 @@ import markdownIt from "markdown-it";
 import markdownItAnchor from "markdown-it-anchor";
 import { DateTime } from "luxon";
 import slugify from "slugify";
+import { linkMetaMiddleware } from "./lib/link-meta.js";
+import { imageUploadMiddleware } from "./lib/image-upload.js";
 
 function getByPath(obj, keyPath) {
   return keyPath.split(".").reduce((acc, k) => acc && acc[k], obj);
@@ -23,6 +25,12 @@ export default function(eleventyConfig) {
   eleventyConfig.addFilter("date", (dateObj, format = "dd LLLL yyyy") =>
     DateTime.fromJSDate(dateObj).toFormat(format)
   );
+
+  // Build-time current year — for footer copyright lines etc. `page.date`
+  // isn't right for this: it reflects a file's own creation/modified date,
+  // not when the site was actually built, so it drifts stale for any page
+  // that isn't edited every year.
+  eleventyConfig.addGlobalData("currentYear", () => new Date().getFullYear());
 
 // 1) Collection: all course handouts under src/courses
 eleventyConfig.addCollection("courses", (collection) => {
@@ -113,12 +121,26 @@ eleventyConfig.addFilter("log", value => {
 
 
   
+  // Course builder link lookup — the browser can't read another origin, so
+  // /api/link-meta does the fetching. Dev server only.
+  eleventyConfig.setServerOptions({
+    middleware: [linkMetaMiddleware, imageUploadMiddleware],
+  });
+
   // Passthrough copies
   eleventyConfig.addPassthroughCopy({ "src/images": "images" });
   eleventyConfig.addPassthroughCopy({ "src/css": "css" });
   eleventyConfig.addPassthroughCopy({ "src/js": "js" });
   eleventyConfig.addPassthroughCopy({ "src/docs": "docs" });
-
+  eleventyConfig.addPassthroughCopy({ "src/note": "note" });
+  eleventyConfig.addPassthroughCopy({ "src/course-builder": "course-builder" });
+  eleventyConfig.addPassthroughCopy({ "src/note-builder": "note-builder" });
+  // card-format.js lives here so the same file can be imported by this Node
+  // build (via a plain node_modules-resolved `import ... from 'js-yaml'`)
+  // and, unmodified, by the browser composer (which resolves that same
+  // specifier through its own import map — see src/course-builder/index.html).
+  eleventyConfig.addPassthroughCopy({ "src/_lib": "_lib" });
+  
   return {
     dir: {
       input: "src",

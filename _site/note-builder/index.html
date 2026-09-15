@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pockit Note Designer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- Inter/JetBrains Mono/Lora are used by the actual rendered note pages
+       (see js/note-designer.js) — kept as-is. Sora is added for the sidebar
+       chrome only, matching /course-builder's own UI font. -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter&family=JetBrains+Mono&family=Lora:ital@1&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div id="brand">
+      <img src="images/pockit-logo.png" alt="" id="brand-logo">
+      <div id="brand-text">
+        <h1>Pockit Note</h1>
+        <p>80mm × 160mm · 4mm grid</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="param-group no-collapse" id="flavour-group">
+    <h2>Flavour</h2>
+    <div class="param-row">
+      <select id="flavour">
+        <option value="gp">Pockit Note GP</option>
+        <option value="hs">Pockit Note HS</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="param-group">
+    <h2>Book Setup</h2>
+    <div class="param-row">
+      <label for="pageCount">Page Count: <span id="pageCountDisplay">32</span></label>
+      <input type="range" id="pageCount" value="32" min="12" max="60" step="4">
+      <span id="warning">Must be a multiple of 4</span>
+    </div>
+    <div class="param-row">
+      <label for="binding">Binding</label>
+      <select id="binding">
+        <option value="saddle-stitch">Saddle Stitch</option>
+      </select>
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="detailPages" checked>
+      <label for="detailPages">Standard Detail Pages (+4)</label>
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="extraDetailPagesOn">
+      <label for="extraDetailPagesOn">Extra Detail Pages (+4)</label>
+    </div>
+  </div> 
+  <div class="param-group">
+    <h2>Page Grid</h2>
+    <div class="param-row">
+      <label for="gridSize">Grid Size: <span id="gridSizeDisplay">4</span>mm</label>
+      <input type="range" id="gridSize" value="4" min="4" max="6" step="1">
+    </div>
+    <div class="param-row">
+      <label for="pageWidth">Page Width: <span id="pageWidthDisplay">80</span>mm</label>
+      <input type="range" id="pageWidth" value="80">
+    </div>
+    <div class="param-row">
+      <label for="pageHeight">Page Height: <span id="pageHeightDisplay">160</span>mm</label>
+      <input type="range" id="pageHeight" value="160">
+    </div>
+    <div class="param-row">
+      <label for="dotSize">Dot Size (mm)</label>
+      <input type="number" id="dotSize" value="0.4" min="0.05" max="2" step="0.05">
+    </div>
+    <div class="param-row">
+      <label for="dotColor">Dot Color</label>
+      <input type="color" id="dotColor" value="#aaaaaa">
+    </div>
+  </div>
+  <div class="param-group">
+    <h2>Page Features</h2>
+    <div class="param-row inline">
+      <input type="checkbox" id="header" checked>
+      <label for="header">Header (8mm)</label>
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="headerLine" checked>
+      <label for="headerLine">Header Line</label>
+    </div>
+    <div class="param-row">
+      <label for="headerLineColor">Header Line Color</label>
+      <input type="color" id="headerLineColor" value="#dedede">
+    </div>
+    <div class="param-row">
+      <label for="headerLineWidth">Header Line Width (mm)</label>
+      <input type="number" id="headerLineWidth" value="0.1" min="0.05" max="1" step="0.05">
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="footer" checked>
+      <label for="footer">Footer (12mm)</label>
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="footerLine" checked>
+      <label for="footerLine">Footer Line</label>
+    </div>
+    <div class="param-row">
+      <label for="footerLineWidth">Footer Line Width (mm)</label>
+      <input type="number" id="footerLineWidth" value="0.1" min="0.05" max="1" step="0.05">
+    </div>
+    <div class="param-row">
+      <label for="footerLineColor">Footer Line Color</label>
+      <input type="color" id="footerLineColor" value="#dedede">
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="pageNumbers" checked>
+      <label for="pageNumbers">Footer Page Numbers</label>
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="quotes" checked>
+      <label for="quotes">Footer Quotes</label>
+    </div>
+    <div class="param-row">
+      <label for="quoteColor">Footer Quote Color</label>
+      <input type="color" id="quoteColor" value="#999999">
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="rowNumbers" checked>
+      <label for="rowNumbers">Row Numbers</label>
+    </div>
+    <div class="param-row">
+      <label for="rowNumberColor">Row Number Color</label>
+      <input type="color" id="rowNumberColor" value="#dedede">
+    </div>
+    <div class="param-row inline">
+      <input type="checkbox" id="columnLine" checked>
+      <label for="columnLine">Column Line</label>
+    </div>
+    <div class="param-row">
+      <label for="columnLineSide">Column Line Side</label>
+      <select id="columnLineSide">
+        <option value="right">Right page only</option>
+        <option value="both">Both pages</option>
+      </select>
+    </div>
+    <div class="param-row">
+      <label for="columnLineCols">Columns from Right</label>
+      <input type="number" id="columnLineCols" value="5" min="1" max="19" step="1">
+    </div>
+    <div class="param-row">
+      <label for="columnLineWidth">Column Line Width (mm)</label>
+      <input type="number" id="columnLineWidth" value="0.1" min="0.05" max="1" step="0.05">
+    </div>
+    <div class="param-row">
+      <label for="columnLineColor">Column Line Color</label>
+      <input type="color" id="columnLineColor" value="#999999">
+    </div>
+  </div>
+
+  <div class="param-group collapsed">
+    <h2>Page Quotes</h2>
+    <div class="param-row">
+      <div id="quoteList"></div>
+    </div>
+  </div>
+  <div class="param-group">
+    <h2>Page Outline</h2>
+    <div class="param-row inline">
+      <input type="checkbox" id="pageOutline" checked>
+      <label for="pageOutline">Show Outline</label>
+    </div>
+    <div class="param-row">
+      <label for="pageOutlineWeight">Outline Weight (mm)</label>
+      <input type="number" id="pageOutlineWeight" value="0.1" min="0.05" max="1" step="0.05">
+    </div>
+    <div class="param-row">
+      <label for="pageOutlineColor">Outline Color</label>
+      <input type="color" id="pageOutlineColor" value="#dedede">
+    </div>
+  </div>
+
+  <div id="print-actions-group">
+    <div id="print-actions">
+      <button id="print-btn" type="button" onclick="window.print()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z"/>
+        </svg>
+        Print
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Preview ── -->
+<div id="preview-wrap">
+  <div id="preview"></div>
+</div>
+
+<div id="print-layout"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/note-designer.js"></script>
+</body>
+</html>

@@ -1,0 +1,2854 @@
+/* ── Global reset (applies to every page using layouts/base.njk) ─ */
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  /* Same fixed brand green as course-builder's --brand-green (see
+     src/course-builder/css/style.css) — kept as its own copy since the
+     two stylesheets aren't shared, not a divergent value. */
+  --brand-green: #00BB27;
+}
+
+/* overflow-x: hidden here (not on body) — the course hero's fanned
+   lesson cards (and anything else bleeding past a container's edge
+   for effect) are meant to overflow their own box visually, but
+   shouldn't make the page horizontally scrollable, by wheel/scrollbar
+   OR a touch/trackpad swipe. Setting this on body too (rather than
+   html alone) triggers a CSS quirk — an element's overflow-y computes
+   to auto once overflow-x is non-visible, which made body its own
+   scroll container distinct from the one actually being scrolled and
+   broke every position: sticky element on the page (nav, the "better"
+   carousel). html alone avoids that, since html scrolling the page
+   already IS the viewport's own scroll, not a second nested one. */
+html {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  color: #111;
+}
+
+/* ── Site nav (traditional left nav, used on all static/marketing
+   pages) — three blocks in DOM order: logo, left (product) links,
+   right (site) links. Logo and left links sit together at the
+   start of the bar; right links are pushed to the end via
+   margin-left: auto on .site-nav-links--right. Always the compact
+   white sticky bar — this used to also have a taller, transparent
+   top-of-page state that faded/shrank into this one on scroll, but
+   that transition was dropped (it was fighting the user's own scroll
+   input; not worth the jank for what it added). */
+:root {
+  --content-max-width: 1100px;
+  --nav-height: 60px;
+  --nav-link-gap: 40px;
+  --nav-gap-left: 25px;
+  /* Must match .site-nav-links--left a::before's height (1.3em) at its
+     80:160 aspect-ratio, plus its gap to the link text — kept as their
+     own variables so the logo's gap-to-links spacing (below) can add
+     them to the link gap and land on the same effective rhythm as the
+     gap between one link's text and the next. */
+  --nav-motif-width: 0.65em;
+  --nav-motif-gap: 0.25em;
+}
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.site-nav-inner {
+  max-width: var(--content-max-width);
+  height: var(--nav-height);
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.site-nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--nav-link-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-nav-links--left {
+  gap: var(--nav-gap-left);
+}
+
+.site-nav-links--right {
+  margin-left: auto;
+}
+
+.site-nav-links a {
+  color: #333;
+  text-decoration: none;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12.8px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.site-nav-links a.is-active {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ── Product links (left of the logo) ────────────────────────────
+   The selected product link gets the Pockit card-swatch mark — the
+   same card-shaped rectangle used throughout course-builder (see
+   .lesson-mark in src/course-builder/css/style.css), fixed at its
+   80:160 proportions via aspect-ratio so it can't be stretched.
+   Every left-side link reserves the same mark + gap space, active
+   or not, so the marker appearing/disappearing never shifts the
+   links around — only its background-color changes. ─────────────── */
+.site-nav-links--left a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nav-motif-gap);
+  padding: 2px 3px 2px 2px;
+  text-transform: uppercase;
+}
+
+.site-nav-links--left a::before {
+  content: "";
+  height: 1.3em;
+  width: var(--nav-motif-width);
+  aspect-ratio: 80 / 160;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.site-nav-links--left a.is-active::before {
+  background: #00BB27;
+}
+
+.site-nav-links a:hover {
+  color: #00BB27;
+}
+
+/* Note / Book — live pages, but not ready to promote yet. Kept in the
+   nav (rather than removed) since they signal the wider venture, just
+   muted grey with a trailing asterisk instead of the usual green
+   hover/active treatment, explained by .site-nav-soon-note beside the
+   link list. */
+.site-nav-links--left a.site-nav-link--soon,
+.site-nav-links--left a.site-nav-link--soon:hover {
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+.site-nav-links--left a.site-nav-link--soon.is-active::before {
+  background: #ccc;
+}
+
+.site-nav-soon-note {
+  /* Same rhythm as the gap between the nav's own items (see
+     --nav-gap-left), since .site-nav-inner itself has no gap of its
+     own between the left link list and this note. */
+  margin-left: var(--nav-gap-left);
+  font-family: 'Source Code Pro', monospace;
+  font-size: 11px;
+  font-style: italic;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.site-nav-logo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  /* Matches .site-nav-links a's own font-size, so the em values in the
+     margin calc below resolve against the same size the links render
+     at — keeps the logo's right-padding equal to the link gap. */
+  font-size: 12.8px;
+  margin-right: calc(var(--nav-gap-left) + var(--nav-motif-width) + var(--nav-motif-gap));
+}
+
+.site-nav-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Hamburger/close toggle — three bars that morph into an X via
+   rotate/translate on body.is-nav-open (see below), rather than
+   swapping in a separate icon. Hidden above the mobile breakpoint,
+   where .site-nav-links render inline as normal instead. */
+.site-nav-toggle {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.site-nav-toggle-bar {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #111;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+@media (max-width: 640px) {
+  .site-nav-inner {
+    padding: 0 12px;
+  }
+
+  .site-nav-links {
+    gap: 14px;
+  }
+
+  .site-nav-links--left {
+    gap: 14px;
+  }
+
+  .site-nav-logo {
+    width: 36px;
+    height: 36px;
+    margin-right: 14px;
+  }
+
+  /* No room for the explanatory caption at this width — the muted
+     colour and asterisk on the links themselves still carry the
+     "not ready yet" signal on their own. */
+  .site-nav-soon-note {
+    display: none;
+  }
+
+  /* Below the breakpoint, the two link lists are replaced by the
+     hamburger button — they only reappear (as a full-screen overlay)
+     once body.is-nav-open is set. */
+  .site-nav-links--left,
+  .site-nav-links--right {
+    display: none;
+  }
+
+  .site-nav-toggle {
+    display: flex;
+  }
+
+  body.is-nav-open .site-nav-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 101;
+  }
+
+  body.is-nav-open .site-nav-toggle-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  body.is-nav-open .site-nav-toggle-bar:nth-child(2) {
+    opacity: 0;
+  }
+
+  body.is-nav-open .site-nav-toggle-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  /* The overlay itself — same .site-nav-inner element, just
+     repositioned to fill the screen and stacked vertically instead
+     of the usual horizontal bar. */
+  body.is-nav-open .site-nav-inner {
+    position: fixed;
+    inset: 0;
+    max-width: none;
+    margin: 0;
+    height: 100vh;
+    background: #fff;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px;
+    z-index: 100;
+  }
+
+  body.is-nav-open .site-nav-logo {
+    display: none;
+  }
+
+  body.is-nav-open .site-nav-links--left,
+  body.is-nav-open .site-nav-links--right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+    margin: 0;
+  }
+
+  body.is-nav-open .site-nav-links a {
+    font-size: 22px;
+  }
+
+  /* The desktop bar's card-swatch mark + its own left padding (see
+     .site-nav-links--left a above) otherwise indent Course/Note/Book
+     further right than the plain About/Contact links — drop both so
+     every link in the overlay starts flush at the same left edge. */
+  body.is-nav-open .site-nav-links--left a {
+    padding: 0;
+  }
+
+  body.is-nav-open .site-nav-links--left a::before {
+    display: none;
+  }
+
+  /* Hidden entirely below 640px on the compact bar (no room for it
+     there) but there's plenty of room in the full-screen overlay —
+     shown here, small, right under the product links it explains. */
+  body.is-nav-open .site-nav-soon-note {
+    display: block;
+    margin: 24px 0;
+    font-size: 12px;
+  }
+}
+
+/* ── Pockit Course landing page (src/course/index.njk) ──────── */
+body.course {
+  background: #FAFAFA;
+}
+
+/* ── Hero (src/course/index.njk) ──────────────────────────────────
+   Full-bleed section, wider than the rest of the page's 720px reading
+   column, with a dot-grid background echoing the card grid drawn in
+   course-builder (see .card-grid / buildCard()'s dot-grid block in
+   src/course-builder/js/render-card.js) — same #cccccc dot colour and
+   the same ~1:10 dot-to-cell ratio (there: 0.4mm dot on a 4mm grid),
+   just re-scaled from print mm to screen px. Text sits left, an image
+   slot sits right. ─────────────────────────────────────────────── */
+.hero {
+  background-color: #FAFAFA;
+  background-image: radial-gradient(circle, #e5e5e5 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  padding: 64px 0 72px;
+  /* html's own overflow-x: hidden (see custom.css's top-level body/
+     html rules) stops scrollbar/wheel-driven horizontal scroll, but a
+     trackpad's two-finger pan can still drag the page sideways up to
+     the fanned lesson cards' own bleeding edge in at least some
+     browsers — clipping right at the section that actually contains
+     the bleed is the more reliable fix, rather than counting on the
+     document root alone to contain it. */
+  overflow-x: hidden;
+}
+
+.hero-inner {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+
+.hero-text {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 14px;
+  /* .hero-inner vertically centres its two columns, which centres this
+     one against the taller card stack — nudge it up off that centred
+     position rather than restructuring the alignment. */
+  margin-top: -60px;
+  /* Outlines the text in white so it stays legible over the dot grid —
+     inherited by the heading/paragraphs below rather than repeated. */
+  text-shadow:
+    -1px -1px 0 #fff,
+     1px -1px 0 #fff,
+    -1px  1px 0 #fff,
+     1px  1px 0 #fff;
+}
+
+.hero-text h1 {
+  font-size: 36px;
+  margin: 0;
+}
+
+.hero-subhead {
+  font-size: 1.1em;
+  line-height: 1.4;
+  color: #333;
+  max-width: 460px;
+}
+
+.hero-reassurance {
+  font-size: 0.9em;
+  line-height: 1.4;
+  color: #333;
+  max-width: 440px;
+  /* .hero-text's flex gap (14px) applies uniformly between every child;
+     halve it here specifically, without touching the h1-to-subhead or
+     reassurance-to-CTA spacing. */
+  margin-top: -7px;
+}
+
+.hero-cta-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Same button language as course-builder's own primary buttons (see
+   the shared `button` base rule and #linkDone/#addCourseOk/etc. in
+   src/course-builder/css/style.css): flat colour, soft shadow instead
+   of a border, a transparent border reserved so hover can swap it in
+   without shifting size, and hover inverting to a white fill with a
+   green outline rather than just darkening. */
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 24px;
+  background: var(--brand-green);
+  color: #fff;
+  text-shadow: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.08);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.hero-cta:hover {
+  background: #fff;
+  color: #111;
+  border-color: var(--brand-green);
+}
+
+.hero-cta-note {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Contributes 0 height to .hero-text's own flex column — the SVG
+   inside breaks out below it via absolute positioning to reach past
+   the rest of the hero and into the "Why" section beneath. Coordinates
+   in the path are plain px (1 viewBox unit = 1px), calibrated by
+   measuring this page's actual rendered layout at ~1400px wide, so
+   this is a fixed-size decoration, not a fluid one — see the html
+   comment beside it in src/course/index.njk. */
+.hero-arrow {
+  position: relative;
+  height: 0;
+  overflow: visible;
+}
+
+.hero-arrow svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 420px;
+  pointer-events: none;
+}
+
+.hero-arrow-curl {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-arrow-head {
+  fill: #ccc;
+}
+
+/* Only shown at wide desktop widths it was actually calibrated for —
+   below that the hero switches to a single stacked column (see the
+   860px breakpoint) and the fixed offsets no longer point anywhere
+   near the "Why" heading. */
+@media (max-width: 900px) {
+  .hero-arrow {
+    display: none;
+  }
+}
+
+.hero-image {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Homepage hero (src/index.njk) ──────────────────────────────────
+   Full-bleed photo, a white content panel shaped like a phone screen
+   sitting on top — reprising the layout of one of the user's own
+   pitch-deck slides (same background photo even), redrawn as an
+   iPhone silhouette with a Dynamic Island cutout rather than that
+   slide's original notch, since the Island is the more current
+   shorthand for "this is a phone" now. The cutout is a real hole (the
+   photo shows through it), built with clip-path: path() using the
+   evenodd rule — an outer rounded-rect subpath plus an inner pill
+   subpath, so anywhere the two overlap (the pill) is left unpainted. */
+.hp-hero {
+  position: relative;
+  min-height: 640px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.hp-hero-photo {
+  position: absolute;
+  inset: 0;
+  background-image: url("/images/hp-hero-bg01.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.hp-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 48px 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* filter: drop-shadow (not box-shadow — see the njk comment) sized
+   exactly to the panel it wraps, so the shadow's own silhouette
+   traces the clipped phone shape, island included. */
+.hp-hero-panel-shadow {
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
+}
+
+/* 290:580 — Pockit's own 1:2 (80:160) card ratio, the same shape as
+   the nav logo's motif and the cover mark, rather than a real phone's
+   actual proportions. */
+.hp-hero-panel {
+  position: relative;
+  width: 290px;
+  height: 580px;
+  box-sizing: border-box;
+  padding: 76px 28px 40px;
+  background: #fff;
+  clip-path: path(evenodd, "M30,0 L260,0 A30,30 0 0 1 290,30 L290,550 A30,30 0 0 1 260,580 L30,580 A30,30 0 0 1 0,550 L0,30 A30,30 0 0 1 30,0 Z M116,20 L174,20 A14,14 0 0 1 174,48 L116,48 A14,14 0 0 1 116,20 Z");
+}
+
+.hp-hero-panel h1 {
+  margin: 0 0 16px;
+  font-size: 3em;
+  line-height: 1.1;
+}
+
+.hp-hero-panel p {
+  margin: 0;
+  font-size: 1.4em;
+  line-height: 1.5;
+  color: #333;
+}
+
+/* Sits within the "screen" itself, near the bottom edge, like a home
+   indicator that happens to nudge you to keep going rather than a
+   generic full-viewport scroll cue. */
+.hp-hero-scroll {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  transform: translateX(-50%);
+  background: rgba(0, 187, 39, 0.08);
+  border: 1px solid rgba(0, 187, 39, 0.3);
+  border-radius: 50%;
+  color: var(--brand-green);
+  animation: hp-hero-scroll-bounce 2s ease-in-out infinite;
+}
+
+@keyframes hp-hero-scroll-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+@media (max-width: 720px) {
+  .hp-hero {
+    min-height: 560px;
+  }
+
+  .hp-hero-inner {
+    justify-content: center;
+  }
+
+  /* Same 1:2 ratio as the desktop panel above, just smaller. */
+  .hp-hero-panel {
+    width: 240px;
+    height: 480px;
+    padding: 64px 22px 32px;
+    clip-path: path(evenodd, "M24,0 L216,0 A24,24 0 0 1 240,24 L240,456 A24,24 0 0 1 216,480 L24,480 A24,24 0 0 1 0,456 L0,24 A24,24 0 0 1 24,0 Z M97,16 L143,16 A12,12 0 0 1 143,40 L97,40 A12,12 0 0 1 97,16 Z");
+  }
+
+  .hp-hero-panel h1 {
+    font-size: 2.2em;
+  }
+
+  .hp-hero-panel p {
+    font-size: 1.2em;
+  }
+}
+
+/* ── "Better" carousel (src/index.njk) ──────────────────────────────
+   Max-width (not full-bleed — wider than the 960px source photos
+   themselves, matching this site's other max-width panels rather than
+   being capped to the images' own native size), rounded-corner photo
+   carousel with vertical dots overlaid on its own right edge. Each
+   slide carries a "frame" overlay modelled on the user's own pitch-
+   deck slide — a black-bordered box, split into a white caption cell
+   and a second cell that's just left transparent. That second cell
+   isn't a separate cutout image: the frame sits directly on top of
+   the same photo it's framing, so the "hole" simply reveals whatever
+   is already behind it at that exact spot — no clip-path or masking
+   needed, just an empty div. Frame position/size are set inline per
+   slide (in %, so they scale with the image at any width) rather than
+   in this stylesheet, since they're tuned per photo and the user may
+   want to nudge them.
+
+   The whole section is a tall (300vh — 100vh per slide) "track" with
+   a position: sticky inner layer pinned just below the nav. Scrolling
+   through the track's extra height is what steps through the slides
+   (see src/js/custom.js, which maps scroll progress through the track
+   to a slide index) — once the track's own height is used up, the
+   section scrolls away and the page continues as normal. No
+   .page-section here: that class's own padding doesn't apply to a
+   pinned layer that needs to fill exactly the sticky viewport slot. */
+.hp-better-track {
+  position: relative;
+  height: 300vh;
+}
+
+.hp-better-sticky {
+  position: sticky;
+  top: var(--nav-height);
+  height: calc(100vh - var(--nav-height));
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.hp-better-wrap {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.hp-better-carousel {
+  position: relative;
+  /* min() caps the carousel's width (and so, via aspect-ratio, its
+     height) so it can't grow taller than the sticky slot actually
+     has room for on a short viewport — without this, the carousel
+     would just overflow .hp-better-sticky on shorter screens. */
+  width: min(100%, calc((100vh - var(--nav-height) - 48px) * 960 / 539));
+  margin: 0 auto;
+  aspect-ratio: 960 / 539;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.hp-better-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease;
+}
+
+.hp-better-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hp-better-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* One black border around the whole card (not a divider between the
+   two cells too — see the reference snip). Deliberately no background
+   of its own: the whole card's box spans both cells, including the
+   "window" one, and a background here would paint white underneath
+   the window too, hiding the photo it's meant to reveal — see
+   .hp-better-frame-window below for where the white actually comes
+   from instead. */
+.hp-better-frame {
+  position: absolute;
+  display: flex;
+  aspect-ratio: 1.1 / 1;
+  border: 12px solid #111;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Per-slide placement — was inline style on each .hp-better-frame
+   (left/top/height), moved into these classes so a mobile media
+   query (see the portrait-carousel block near the bottom of this
+   file) can override them per slide instead of losing to inline
+   style's own specificity. */
+.hp-better-frame--1 {
+  left: 65%;
+  top: 15%;
+  height: 40%;
+}
+
+.hp-better-frame--2 {
+  left: 10.5%;
+  top: 40%;
+  height: 40%;
+}
+
+.hp-better-frame--3 {
+  left: 51%;
+  top: 25%;
+  height: 40%;
+}
+
+/* flex: 1 1 auto — takes whatever width the window (fixed to its own
+   80:160 ratio below) doesn't need, rather than the other way round. */
+.hp-better-frame-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  background: #fff;
+  padding: 6%;
+}
+
+.hp-better-frame-text p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.8em;
+  line-height: 1.25;
+  color: #111;
+  /* .hp-better-frame-text has min-width: 0, which lets this column
+     shrink narrower than a single word — without this, that word
+     just overflows behind .hp-better-frame-window instead of
+     wrapping, silently disappearing rather than visibly breaking. */
+  overflow-wrap: break-word;
+}
+
+/* Fixed to Pockit's own 80:160 card ratio (see the nav logo's motif)
+   rather than just filling whatever space .hp-better-frame-text
+   doesn't take — flex: 0 0 auto plus an explicit height (matching the
+   frame's own, so aspect-ratio has a definite dimension to size the
+   width from) rather than stretching to fill the remaining row.
+   No background of its own (see the comment on .hp-better-frame above
+   for why) — the white "mat" around the photo is a solid white inset
+   box-shadow instead, which paints inside this box's own edges only.
+   A background-based margin would have to belong to some ancestor
+   spanning the full window area, which would then also paint white
+   straight over the actual hole. */
+/* 95:160 rather than a literal 80:160 — the 16px white inset "mat"
+   below eats into the box on all sides, so the box itself needs to
+   be wider than the true 80:160 target for the remaining visible
+   photo to actually read as that ratio. */
+.hp-better-frame-window {
+  flex: 0 0 auto;
+  height: 100%;
+  aspect-ratio: 95 / 160;
+  box-shadow: inset 0 0 0 16px #fff;
+}
+
+/* Overlaid on the carousel's own right edge rather than sitting
+   beside it — a dark translucent pill behind the dots so they stay
+   legible regardless of how light or dark the photo underneath is. */
+.hp-better-dots {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 8px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 999px;
+}
+
+.hp-better-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.hp-better-dot:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.hp-better-dot.is-active,
+.hp-better-dot.is-active:hover {
+  background: var(--brand-green);
+}
+
+@media (max-width: 640px) {
+  .hp-better-frame {
+    border-width: 8px;
+  }
+
+  .hp-better-frame-text {
+    padding: 5%;
+  }
+
+  .hp-better-frame-window {
+    box-shadow: inset 0 0 0 10px #fff;
+  }
+
+  /* Portrait carousel — the desktop 960:539 landscape crop leaves
+     almost nothing to look at on a narrow phone screen (full width /
+     landscape ratio = a short squashed strip). 3:4 instead, same width
+     cap formula as desktop's own min() just flipped for a taller-than-
+     wide ratio, so it still can't overflow a short viewport's sticky
+     slot. */
+  .hp-better-carousel {
+    width: min(100%, calc((100vh - var(--nav-height) - 48px) * 3 / 4));
+    aspect-ratio: 3 / 4;
+  }
+
+  /* Each photo's own object-position, so the ~45%-narrower portrait
+     crop still centres on its actual subject instead of the (wider,
+     landscape-tuned) default 50% center — see the comment beside each
+     image in index.njk for who/what it needs to keep in frame. */
+  .hp-better-img--1 {
+    object-position: 92% 50%;
+  }
+
+  .hp-better-img--2 {
+    object-position: 12% 55%;
+  }
+
+  .hp-better-img--3 {
+    object-position: 68% 40%;
+  }
+
+  /* Smaller relative to the container than desktop's own 40% — at
+     the portrait ratio's much greater height, 40% would render as a
+     visually dominant frame that overwhelms a narrow phone screen.
+     Positions are re-picked per slide too, to land over each portrait
+     crop's own emptier background rather than the desktop frame's
+     (now wrong) landscape-crop placement. 42% (50% bigger than the
+     28% this started at) — left/top re-picked again to still fit
+     inside the container at this larger size without overflowing its
+     bottom or right edge. */
+  .hp-better-frame--1,
+  .hp-better-frame--2,
+  .hp-better-frame--3 {
+    height: 42%;
+  }
+
+  .hp-better-frame--1 {
+    left: 24%;
+    top: 15%;
+  }
+
+  .hp-better-frame--2 {
+    /* Further right than slides 1/3, reaching close enough to the
+       carousel's own right edge to collide with .hp-better-dots (a
+       fixed position regardless of slide) — pushed down to start
+       right where the dots end instead. */
+    left: 7%;
+    top: 42%;
+  }
+
+  .hp-better-frame--3 {
+    left: 22%;
+    top: 25%;
+  }
+}
+
+/* ── Hero card ─────────────────────────────────────────────────────
+   A recreation of a real course-builder lesson card — same 80mm ×
+   160mm size (so it renders true-to-life, not just "card-shaped"),
+   same header/footer structure, hole-punch and colours as .card /
+   .card-header / .card-footer and buildCard() in
+   src/course-builder/css/style.css and .../js/render-card.js. Body
+   content is still undesigned — this is header + footer only. */
+/* A second card directly behind .hero-card, same position but rotated
+   a little further — since both share a centre, that fans its corners
+   out just past the front card's edges, reading as a card peeking out
+   from behind rather than a deliberately offset second element. No
+   header/footer of its own: at that sliver of visibility there'd be
+   nothing to read anyway. */
+.hero-card-back {
+  position: absolute;
+  left: 36mm;
+  top: 10mm;
+  width: 80mm;
+  height: 160mm;
+  background: #fff;
+  outline: 0.2mm solid #dedede;
+  outline-offset: -0.1mm;
+  transform: rotate(8deg);
+}
+
+/* Positioned absolutely within .hero-card-stack below, offset right of
+   the front cover so the cover overlaps its left side — lowered and
+   tilted slightly so it reads as sliding out from underneath rather
+   than sitting flush behind it. */
+.hero-card {
+  position: absolute;
+  left: 36mm;
+  top: 10mm;
+  width: 80mm;
+  height: 160mm;
+  background: #fff;
+  overflow: hidden;
+  outline: 0.2mm solid #dedede;
+  outline-offset: -0.1mm;
+  transform: rotate(4deg);
+}
+
+.hero-card-header,
+.hero-card-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 2mm;
+}
+
+.hero-card-header {
+  top: 0;
+  height: 12mm;
+  box-shadow: inset 0 -0.1mm 0 #dedede;
+}
+
+.hero-card-footer {
+  bottom: 0;
+  height: 8mm;
+  box-shadow: inset 0 0.1mm 0 #dedede;
+}
+
+.hero-card-punch {
+  position: absolute;
+  left: 4mm;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4mm;
+  height: 4mm;
+  border-radius: 50%;
+  background: var(--brand-green);
+  flex-shrink: 0;
+}
+
+/* Title/count stack against the header's right edge, clear of the punch —
+   margin-left derived the same way as the real card: punch-left +
+   punch-size + punch-gap - card-pad (4 + 4 + 2 - 2 = 8mm). */
+.hero-card-header-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  gap: 0.4mm;
+  margin-left: 8mm;
+}
+
+.hero-card-header-text,
+.hero-card-footer-text,
+.hero-card-lesson-count,
+.hero-card-number {
+  font-family: 'Barlow', sans-serif;
+  font-size: 2.4mm;
+  white-space: nowrap;
+}
+
+.hero-card-header-text {
+  max-width: 100%;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-card-lesson-count {
+  letter-spacing: 0.05em;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.hero-card-footer-text {
+  letter-spacing: 0.08em;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.hero-card-number {
+  letter-spacing: 0.05em;
+  color: #999;
+  margin-left: auto;
+  padding-left: 2mm;
+}
+
+/* ── Card body wireframe ──────────────────────────────────────────
+   Placeholder content standing in for real blocks — not an attempt at
+   a specific lesson, just enough variety (text, a full-bleed image,
+   more text, a question-with-space-to-answer block) to read as a real
+   card layout. Loosely modelled on course-builder's own block types
+   (see BLOCK_TYPES in src/course-builder/js/block-types.js): Text,
+   Image, and Task/Reflection (the boxed, ruled "write your answer
+   here" type). All light grey — wireframe, not content. */
+.hero-card-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 12mm;
+  bottom: 8mm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+  padding-top: 4mm;
+}
+
+/* Heading block — bolder and shorter than a body text line, same
+   "title" role as course-builder's own Heading type. */
+.hero-card-wire-heading {
+  flex-shrink: 0;
+  margin: 0 4mm;
+  height: 3mm;
+  width: 55%;
+  border-radius: 1mm;
+  background: #ebebeb;
+}
+
+.hero-card-wire-text {
+  padding: 0 4mm;
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+}
+
+.hero-card-wire-line {
+  height: 2mm;
+  border-radius: 1mm;
+  background: #f2f2f2;
+}
+
+.hero-card-wire-line.is-short {
+  width: 60%;
+}
+
+/* Full-bleed, edge to edge — same "no padding, card's own overflow
+   clips it" treatment as .card-block-image in course-builder. */
+.hero-card-wire-image {
+  flex-shrink: 0;
+  height: 40mm;
+  background: #f8f8f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-card-wire-image svg {
+  width: 12mm;
+  height: 12mm;
+  fill: none;
+  stroke: #e4e4e4;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Link (QR) block — real course-builder puts the QR square on the
+   left with title/description text filling the rest; mirrored here
+   (text left, QR wireframe right) purely as a stylistic choice for
+   this placeholder, per instruction. */
+.hero-card-wire-link {
+  flex-shrink: 0;
+  margin: 0 4mm;
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+}
+
+.hero-card-wire-link-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+.hero-card-wire-qr {
+  flex-shrink: 0;
+  width: 24mm;
+  height: 24mm;
+  fill: #eee;
+}
+
+/* Boxed, like Task/Reflection — a question line, then blank ruled
+   space where a student would write their answer by hand (so those
+   lines are just rules, not filled bars like the text block above).
+   flex: 1 (rather than sizing to its own content) pushes it down to
+   the bottom of the card and lets it grow to fill whatever's left,
+   rather than leaving the lower part of the card blank. Bottom margin
+   keeps it off the footer's own top edge. */
+.hero-card-wire-task {
+  margin: 0 4mm 4mm;
+  flex: 1;
+  border: 0.25mm solid #eee;
+  border-radius: 2mm;
+  padding: 3mm;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+}
+
+.hero-card-wire-question {
+  flex-shrink: 0;
+  height: 2mm;
+  width: 70%;
+  border-radius: 1mm;
+  background: #ebebeb;
+}
+
+.hero-card-wire-answer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hero-card-wire-answer span {
+  display: block;
+  border-bottom: 0.2mm solid #f2f2f2;
+}
+
+/* ── Card + front cover stack ─────────────────────────────────────
+   The card sits behind, offset right; the front cover sits in front,
+   offset to the left over it — same idea as course-builder's own
+   #cover-front/#cover-front-mark/#cover-front-info/#cover-front-contact
+   (see renderCoverView() in src/course-builder/js/course-builder.js),
+   just laid out standalone rather than as part of the full back/spine/
+   front spread. Stack footprint (116mm) = the card's right edge (36mm
+   + 80mm) since the cover is flush with the stack's own left edge.
+   Extra height (180mm vs. the cover's 161mm) leaves room for the card's
+   own lower, tilted position below. */
+.hero-card-stack {
+  position: relative;
+  width: 116mm;
+  height: 180mm;
+}
+
+.hero-cover-front {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  width: 81mm;
+  height: 161mm;
+  background-color: #fff;
+  background-image: url("/images/pockit-course-sample-cover.jpg");
+  background-size: cover;
+  background-position: center;
+  outline: 0.2mm solid #dedede;
+  outline-offset: -0.1mm;
+  box-shadow: 0 2mm 3mm rgba(0, 0, 0, 0.08), 2mm 3mm 8mm rgba(0, 0, 0, 0.15);
+}
+
+/* Brand mark, top-right of the cover — same card-shaped (80:160)
+   rectangle as the nav's own product-link motif, echoing the Pockit
+   logo. Fixed at 10 grid units (40mm) tall, same as the real cover. */
+.hero-cover-front-mark {
+  position: absolute;
+  top: 4mm;
+  right: 4mm;
+  width: 20mm;
+  height: 40mm;
+  background: var(--brand-green);
+}
+
+/* Course code/title, to the mark's left — same top/height, a grid
+   unit's padding from the mark and from the cover's own left edge. */
+.hero-cover-front-info {
+  position: absolute;
+  top: 4mm;
+  left: 4mm;
+  width: 49mm;
+  height: 40mm;
+  box-sizing: border-box;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5mm;
+  padding: 2mm;
+}
+
+.hero-cover-front-code {
+  flex-shrink: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 2.4mm;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: #111;
+}
+
+.hero-cover-front-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 3.2mm;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #333;
+}
+
+/* Author name/role — pinned to the info box's own bottom edge via
+   margin-top: auto, same as #cover-front-person on the real cover: the
+   title above still owns flex: 1 and would otherwise grow to fill this
+   space, but the auto margin claims free space ahead of flex-grow, so
+   the title settles to its own size and this sits under it. */
+.hero-cover-front-person {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3mm;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.hero-cover-front-person-name {
+  font-size: 2.2mm;
+  font-weight: 600;
+  color: #333;
+}
+
+.hero-cover-front-person-role {
+  font-size: 1.9mm;
+  font-weight: 400;
+  color: #666;
+}
+
+/* Blank prompt for the owner's handwritten name/contact details, bottom
+   of the cover — same grid-unit padding as the mark/info above. */
+.hero-cover-front-contact {
+  position: absolute;
+  left: 4mm;
+  right: 4mm;
+  bottom: 4mm;
+  height: 12mm;
+  box-sizing: border-box;
+  background: #fff;
+  padding: 1mm;
+  /* Without its own font-size, this block's line box uses the inherited
+     (much larger) ambient font-size for its strut, pushing the span's
+     text down well past the padding alone — collapse that strut to
+     nothing so the padding is the only gap above the text. */
+  font-size: 0;
+}
+
+.hero-cover-front-contact span {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 2mm;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: #888;
+}
+
+@media (max-width: 860px) {
+  .hero-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 32px;
+  }
+
+  .hero-text {
+    align-items: flex-start;
+    text-align: left;
+    /* The -60px nudge above is only for offsetting centred alignment
+       against the taller image column — irrelevant once they stack. */
+    margin-top: 0;
+  }
+
+  .hero-subhead,
+  .hero-reassurance {
+    max-width: none;
+  }
+
+  .hero-image {
+    width: 100%;
+  }
+
+  /* "No sign in required." wraps below the button instead of
+     sitting beside it — a row is too cramped once .hero-text itself
+     is down to a narrow single column. */
+  .hero-cta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* ── Below-the-hero sections (src/course/index.njk) ───────────────
+   Why / What run the same .page-section shell, alternating a plain
+   white and a very light grey background so each reads as its own
+   block without needing a rule between them. The CTA band closes the
+   page out with the same button used in the hero. */
+.page-section {
+  padding: 64px 24px;
+}
+
+/* A short standalone beat between the carousel and "Books..." —
+   extra vertical breathing room beyond .page-section's own 64px so
+   it reads as its own pause rather than crowding into the section
+   below. */
+/* Same dotted grid as .hp-products-section right below it, but faded
+   in from transparent at the top to fully visible at the bottom — a
+   white veil over the dots/grey fades to nothing by the section's own
+   bottom edge, so it blends seamlessly into .hp-products-section's
+   solid version of the same pattern instead of a hard seam. */
+.hp-so-what-then {
+  padding: 140px 24px;
+  background-color: #FAFAFA;
+  background-image:
+    linear-gradient(to bottom, #fff 0%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(circle, #e5e5e5 1.2px, transparent 1.2px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+/* Positioned (not the section itself) so just the heading's own text
+   sits above the wobbly line — the section's background/padding
+   stays behind it, in its normal (non-positioned) stacking, so the
+   line still shows through the dotted grid around the heading. */
+.hp-so-what-then h2 {
+  position: relative;
+  z-index: 1;
+}
+
+/* Same breakout technique as .hero-arrow (course page): zero-height
+   so it doesn't affect layout, overflow: visible so the tall
+   absolutely-positioned SVG inside can paint down through the normal
+   document flow of the sections below it. */
+.hp-wobble-arrow {
+  position: relative;
+  z-index: 0;
+  height: 0;
+  overflow: visible;
+}
+
+.hp-wobble-arrow svg {
+  position: absolute;
+  top: -132px;
+  left: 0;
+  width: 1415px;
+  height: 540px;
+  pointer-events: none;
+}
+
+.hp-wobble-arrow-curl {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hp-wobble-arrow-head {
+  fill: #ccc;
+}
+
+/* Only shown at the wide desktop width it was calibrated for — see
+   the html comment beside it in index.njk. */
+@media (max-width: 1080px) {
+  .hp-wobble-arrow {
+    display: none;
+  }
+}
+
+/* Course spotlight's CTA — a plain wrapper (not .page-section-cta,
+   whose own ".page-section-cta a" rule is more specific than
+   .hero-cta and would override its white text with green) so
+   .hero-cta's usual button styling applies untouched. */
+.hp-course-spotlight-cta {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.page-section--alt {
+  background: #FAFAFA;
+}
+
+.page-section-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.page-section-inner h2 {
+  font-size: 28px;
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+.page-section-intro {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #444;
+  max-width: 560px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+
+/* Keeps the heading/intro's own block centred (equal gutters either
+   side — a 1-2-1 column split within the wide 1100px section, ~275px
+   each side at 560px content width) while left-aligning the text
+   inside it, rather than the centred-text look everything else on
+   this page uses. Covers h1 too (the homepage's products section
+   uses an h1 here, not h2). */
+.page-section-inner--intro-left h2,
+.page-section-inner--intro-left h1 {
+  max-width: 560px;
+  margin: 0 auto 12px;
+  text-align: left;
+}
+
+.page-section-inner--intro-left .page-section-intro {
+  text-align: left;
+}
+
+/* /about's own first section after the hero — centred on desktop
+   like the rest of this page's sections, but left-aligned on mobile
+   specifically (unlike --intro-left, which is left-aligned at every
+   width). */
+@media (max-width: 640px) {
+  .about-intro h2,
+  .about-intro .page-section-intro {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* Homepage Course spotlight, below the three-product grid — same
+   centred-on-desktop, left-on-mobile treatment as .about-intro
+   above. */
+@media (max-width: 640px) {
+  .hp-course-spotlight h2 {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .hp-course-spotlight-cta {
+    text-align: left;
+  }
+}
+
+.page-section-inner--intro-left .page-section-cta {
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+/* Two equal-size landscape photos, side by side, full width of
+   .page-section-inner (720px) — equal flex-grow with flex-basis: 0
+   splits that width evenly, and since both share the same
+   `aspect-ratio` (the photos' own true 1152:768), neither needs
+   cropping to line up with the other. */
+.why-photo-row {
+  display: flex;
+  gap: 12px;
+  margin: 0 auto 10px;
+}
+
+.why-photo-row img {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  aspect-ratio: 1152 / 768;
+}
+
+/* One caption for the pair above, not one per photo. */
+.why-photo-caption {
+  margin: 0 auto 40px;
+  text-align: center;
+  font-size: 0.6em;
+  font-style: italic;
+  color: #666;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+/* A real card, unlike .feature-card below: icon on top, then heading,
+   then description, all inside one bordered/shadowed unit. */
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+.feature-item .feature-icon {
+  margin: 0 0 16px;
+}
+
+.feature-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 36px;
+  margin-bottom: 48px;
+}
+
+/* Stacked on mobile — shared by /course's own "What is a Pockit
+   Course?" section and the homepage's Course spotlight, so both get
+   this without a duplicate rule. */
+@media (max-width: 640px) {
+  .feature-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Full-bleed artwork at the top of the card — cancels the card's own
+   padding on three sides via negative margin, rather than a small
+   icon-in-a-box like the other cards use. */
+.feature-item-art {
+  align-self: stretch;
+  margin: -24px -24px 16px;
+}
+
+.feature-item-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.feature-item h3 {
+  font-size: 1.2em;
+  margin: 0 0 8px;
+}
+
+.feature-item-number {
+  color: var(--brand-green);
+}
+
+.feature-item p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #444;
+  margin: 0;
+  padding-bottom: 8px;
+}
+
+/* Pins to the bottom of the card regardless of how many lines the
+   description above runs to (.feature-item is a flex column), so a
+   row of cards with uneven copy still lines its links/badges up. */
+.feature-item-link {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-green);
+  text-decoration: none;
+}
+
+.feature-item-link:hover {
+  text-decoration: underline;
+}
+
+.feature-item-soon {
+  margin-top: auto;
+  padding-top: 4px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 11px;
+  font-style: italic;
+  color: #aaa;
+}
+
+/* The "Note*"/"Book*" asterisk within an h3 — smaller and lighter
+   than the heading text around it, same muted grey as the nav/footer
+   asterisks it echoes, rather than the heading's own bold black. */
+.text-soon-mark {
+  font-size: 0.7em;
+  font-weight: 400;
+  color: #aaa;
+}
+
+/* ── Homepage product visuals (src/index.njk) ───────────────────────
+   True-scale recreations of each physical product (same real mm
+   sizing as the /course hero's own card + cover, not shrunk down to
+   icon size), sitting above their own white panel rather than inside
+   it. Course reuses the /course hero's exact markup and classes
+   (.hero-card-stack etc.) wholesale for full wireframe detail and the
+   real cover photo — only the card-behind-cover peek is overridden
+   here, tightened way down from the hero's own dramatic fanned offset
+   so three of these side by side don't turn into three separate
+   heroes. Book reuses .hero-cover-front too (mark + code/title panel)
+   minus the bottom "Name/Contact" box and the author line, plus a
+   borrowed placeholder cover image. Note has no real product photo
+   yet, so it's drawn from scratch, at the real product's own 10%-
+   wider-than-Course/Book proportions rather than the usual 80:160. */
+.hp-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.hp-product-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* flex: 0 (not 1) so the box only ever takes its content's own
+   height — growing to fill the row (which .hp-product-column's own
+   height: 100% otherwise invites, since Course's own visual is
+   tallest and sets the row height) would leave Note/Book's shorter
+   visuals padded with empty space below them, pushing their titles
+   lower than Course's. Each title now sits right after its own
+   visual instead. */
+.hp-product-visual {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-bottom: 24px;
+}
+
+/* Plain left-aligned text under each mockup instead of the site's
+   usual white-card .feature-item treatment — flush with the mockup's
+   own left edge (see justify-content: flex-start above) rather than
+   centred/boxed. */
+.hp-product-grid .feature-item {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.hp-product-grid .feature-item h3 {
+  font-family: 'Source Code Pro', monospace;
+  text-transform: uppercase;
+}
+
+/* Unlike the site's usual .feature-item row, these three shouldn't
+   snap their link/badge to a shared bottom edge (.feature-item-link's
+   own margin-top: auto) when their descriptions run to different
+   lengths — flow straight after the paragraph instead. */
+.hp-product-grid .feature-item-link,
+.hp-product-grid .feature-item-soon {
+  margin-top: 0;
+}
+
+/* Book's own visual is right-aligned within its column (see
+   .hp-product-visual--book's align-self), so its title/description
+   need the same right-aligned, fixed-width box to keep lining up
+   with the cover's own (now shifted-right) left edge. */
+.feature-item--book {
+  align-self: flex-end;
+  width: 81mm;
+}
+
+/* Course's own stack is 91mm wide, but that includes the peeking
+   card-back behind the 81mm front cover (see .hero-card-back's own
+   left: 10mm offset) — pad the text in by that same 10mm so it wraps
+   to the cover's own width, not the wider peeking stack. Needs the
+   same two-class specificity as .hp-product-grid .feature-item
+   (padding: 0) above to actually win over it. */
+.hp-product-grid .feature-item--course {
+  padding-right: 10mm;
+}
+
+/* Overrides the hero's own left: 36mm/rotated fan (see .hero-card-back
+   and .hero-card in the "Hero card" block above) with a much smaller
+   flat (unrotated) horizontal peek, and shrinks .hero-card-stack's own
+   footprint to match — the hero's 116×180mm stack has room to spare
+   for the fan this doesn't use. Just enough (8mm) to reveal the page
+   number in the card's own footer (see .hero-card-number — it sits
+   right at the card's own right edge), not the wider wireframe body
+   further in from that edge. */
+.hp-product-visual--course .hero-card-stack {
+  width: 91mm;
+  height: 161mm;
+}
+
+.hp-product-visual--course .hero-card-back,
+.hp-product-visual--course .hero-card {
+  top: 0;
+  transform: none;
+}
+
+.hp-product-visual--course .hero-card-back {
+  left: 10mm;
+}
+
+.hp-product-visual--course .hero-card {
+  left: 8mm;
+}
+
+/* .hero-cover-front is itself position: absolute (see the "Hero card"
+   block above), so it needs this positioned ancestor sized to match
+   it — otherwise, with no in-flow content of its own, it would
+   collapse to zero height and the panel below would sit where the
+   cover should be. */
+/* Right-aligned within its column (align-self, not justify-content —
+   this box's own fixed 81mm width is narrower than the column, and
+   it's the column's cross-axis position that needs moving) so its
+   right edge lines up with Contact in the nav above, instead of
+   trailing short of it like a left-anchored fixed-width box would. */
+.hp-product-visual--book {
+  position: relative;
+  align-self: flex-end;
+  width: 81mm;
+  height: 161mm;
+}
+
+.hp-product-visual--book .hero-cover-front {
+  background-image: url("/images/book-bg01.jpg");
+}
+
+/* Book's own info order is title-then-subtitle rather than
+   Course's code-then-title, so the shared .hero-cover-front-title
+   needs its flex-grow off here (it would otherwise still claim the
+   free space above the author credit, pushing the subtitle away from
+   the title it belongs to) and the reused .hero-cover-front-code
+   becomes an italic subtitle line instead of a code label. */
+/* Tighter than Course's own 1.5mm gap — Book's title/subtitle pair
+   reads better close together than spaced like a code/title pair. */
+.hp-product-visual--book .hero-cover-front-info {
+  gap: 0.5mm;
+}
+
+.hp-product-visual--book .hero-cover-front-title {
+  flex: 0 1 auto;
+  font-size: 4mm;
+}
+
+.hp-product-visual--book .hero-cover-front-code {
+  font-style: italic;
+  font-size: 3.5mm;
+  letter-spacing: -0.05em;
+}
+
+/* 88mm — 10% wider than Course/Book's own 80mm, matching the real
+   Note product's own proportions rather than the site's usual 80:160
+   card ratio. */
+.hp-product-note {
+  position: relative;
+  overflow: hidden;
+  width: 88mm;
+  height: 160mm;
+  /* Slightly darker than the site's usual --brand-green — the grain
+     overlay's own opacity (see .hp-product-note-grain) lightens the
+     cover a touch, so this compensates rather than sharing the same
+     value everything else on the site uses. */
+  background: #00a422;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* Faint procedural grain (see the feTurbulence filter beside this div
+   in the njk) so the flat green reads as textured card stock rather
+   than a plain colour swatch. Plain opacity, not a blend mode — this
+   green's own R/G/B channels sit close to 0 or 1 (not mid-grey), and
+   overlay/soft-light et al only really perturb colours near 0.5, so
+   they left this almost untouched regardless of opacity. Ordinary
+   alpha compositing darkens/lightens reliably no matter the base
+   colour's own channel values. */
+.hp-product-note-grain {
+  position: absolute;
+  inset: 0;
+  filter: url(#hp-note-grain);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* A small notch cut from the cover's top-right corner, as if the
+   card stock behind the cover shows through — flush with both the
+   top and right edges so no cover colour borders it on those sides. */
+.hp-product-note-notch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8mm;
+  height: 4mm;
+  background: #f4efe3;
+  box-shadow: inset 2px -2px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* A second cut-out, like an elastic closure tab, down the right edge. */
+.hp-product-note-elastic {
+  position: absolute;
+  top: 20mm;
+  right: 2mm;
+  width: 4mm;
+  height: 8mm;
+  background: #f4efe3;
+  box-shadow: inset 2px -2px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Three lines reading "PK" / "OI" / "CT" — split down two columns
+   they spell POC / KIT. Sized to the elastic cut-out's own height so
+   the two sit level with each other. */
+.hp-product-note-mark {
+  position: absolute;
+  top: 20.4mm;
+  right: 6mm;
+  height: 8mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  padding-right: 1mm;
+  font-family: 'Source Code Pro', monospace;
+  font-weight: 700;
+  color: #111;
+  font-size: 3mm;
+  line-height: 0.85;
+  letter-spacing: 0.05em;
+}
+
+/* A faint vertical margin rule, like a ruled notebook page. */
+.hp-product-note::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8mm;
+  width: 2px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Triple the left margin of the reused "Name / Contact" box (see
+   .hero-cover-front-contact, shared with Course's own cover) — just
+   this side, just on Note, not its inside padding or Course's own
+   copy of the same box. */
+.hp-product-note .hero-cover-front-contact {
+  left: 12mm;
+}
+
+/* Three fixed-mm-width products side by side need more room than a
+   narrower viewport has to give — stack them instead, each visual
+   still centred above its own panel. */
+@media (max-width: 1080px) {
+  .hp-product-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+}
+
+/* On phones, swipe horizontally between the three instead of a long
+   vertical stack — a plain scroll-snap row (no JS) with each column
+   as its own full-width, centred "slide". Overrides the desktop
+   grid's shared-left-edge alignment (.hp-product-visual's own
+   flex-start, Book's flex-end, Course's padding-right) since that
+   only made sense when the three columns shared one row — each slide
+   here stands alone, so everything in it is simply centred. */
+@media (max-width: 640px) {
+  .hp-product-grid {
+    display: flex;
+    grid-template-columns: none;
+    gap: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Breaks out to the full viewport width — without this, the grid
+       stays confined to .page-section's own 24px padding (the only
+       padding left at this width now that .page-section-inner--wide's
+       own matching 24px drops out below 1148px — see that rule),
+       leaving each "slide" ~48px narrower than the viewport on each
+       side, too narrow to fit the 344px Course mockup even centred. */
+    margin: 0 -24px;
+  }
+
+  .hp-product-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hp-product-column {
+    flex: 0 0 100%;
+    width: 100%;
+    align-items: flex-start;
+    scroll-snap-align: center;
+    padding: 0 16px;
+  }
+
+  .hp-product-visual,
+  .hp-product-visual--book {
+    justify-content: flex-start;
+    align-self: flex-start;
+  }
+
+  .hp-product-grid .feature-item {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .hp-product-grid .feature-item--course {
+    padding-right: 0;
+  }
+
+  .feature-item--book {
+    align-self: flex-start;
+    width: auto;
+  }
+}
+
+/* A single centred link beneath a .page-section-intro, offering a
+   way to a fuller page without repeating that page's own content
+   here — used by the homepage to point at /about/ twice. */
+.page-section-cta {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.page-section-cta a {
+  font-weight: 600;
+  color: var(--brand-green);
+  text-decoration: none;
+}
+
+.page-section-cta a:hover {
+  text-decoration: underline;
+}
+
+/* Under the hero's own CTA row rather than centred like the section-
+   level version above — left-aligned with the rest of .hero-text. */
+.hero-story-link {
+  margin-top: 12px;
+  text-align: left;
+}
+
+/* Widens just the "What is a Pockit Course?" section's own inner
+   container to the same max-width as the hero/nav, for its 3x3 icon
+   grid — .page-section-inner h2/.page-section-intro above still cap
+   their own width and stay centred within it. */
+/* Matches .site-nav-inner's own max-width + padding combination
+   (same var, same 24px) so a --wide section's content bounds line up
+   exactly with the nav's logo/links above it, rather than running
+   flush to the outer 1100px box while the nav's own content sits
+   inset within it. */
+.page-section-inner--wide {
+  max-width: var(--content-max-width);
+  padding: 0 24px;
+}
+
+/* Below ~1148px (var(--content-max-width) 1100px + this element's own
+   48px padding), .page-section's own 24px padding is already the
+   thing constraining this box's width — its max-width: 1100px stops
+   being the limiting factor, margin: auto has no extra space left to
+   center within, and the box sits flush against .page-section's own
+   padded edge. Its own 24px padding then STACKS with that outer 24px,
+   giving content a 48px inset instead of the 24px every plain
+   .page-section-inner (and the nav bar) uses — dropping it here once
+   the outer padding takes over restores the single, consistent 24px
+   inset at every narrower width, not just phone-sized ones. */
+@media (max-width: 1148px) {
+  .page-section-inner--wide {
+    padding: 0;
+  }
+}
+
+/* ── 9-card feature grid ("What is a Pockit Course?") ──────────────
+   Each icon is a small constructed graphic drawn from the same visual
+   language as the rest of this page and course-builder itself — the
+   card shape/punch, the dot grid, the cover's mark + info panel, the
+   QR wireframe, real BLOCK_TYPES icon glyphs (src/course-builder/js/
+   block-types.js) — rather than generic stock icons, with one green
+   accent shape per icon tying back to the brand. */
+.feature-grid-9 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px 40px;
+}
+
+/* Icon in its own column to the left, spanning both the heading's and
+   paragraph's rows (grid auto-placement then puts h3/p in column 2
+   without needing their own explicit placement or a markup wrapper). */
+.feature-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 16px;
+  align-items: start;
+  text-align: left;
+}
+
+.feature-icon {
+  width: 84px;
+  height: 84px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+.feature-card .feature-icon {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+.feature-icon svg {
+  width: 51px;
+  height: 51px;
+  fill: none;
+  stroke: #999;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.feature-card h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+  padding-top: 6px;
+}
+
+.feature-card p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #444;
+  margin: 0;
+}
+
+@media (max-width: 780px) {
+  .feature-grid-9 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .feature-grid-9 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cta-band {
+  padding: 64px 24px;
+  text-align: center;
+  background-color: #FAFAFA;
+  background-image: radial-gradient(circle, #e5e5e5 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+/* Same faint dotted grid as .cta-band, behind the product mockups. */
+.hp-products-section {
+  background-color: #FAFAFA;
+  background-image: radial-gradient(circle, #e5e5e5 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+.cta-band-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.cta-band h2 {
+  font-size: 26px;
+  margin: 0 0 20px;
+}
+
+.cta-band .hero-cta-row {
+  margin-top: 0;
+  justify-content: center;
+}
+
+/* Shared by /course, /about and /thanks (all end on a .cta-band) —
+   just the heading left-aligns on mobile, rather than .cta-band's own
+   centred text. */
+@media (max-width: 640px) {
+  .cta-band h2 {
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .why-photo-row {
+    flex-direction: column;
+  }
+
+  .why-photo-row img {
+    width: 100%;
+    flex-grow: 0;
+  }
+}
+
+/* ── About page (src/about/index.njk) ──────────────────────────────
+   Full-bleed photo hero — same text-left idea as the dot-grid hero
+   above, but a real photo instead of a graphic backdrop, since this
+   page is about the story behind Pockit rather than the product
+   itself. The copy sits on its own solid white card rather than
+   directly over the photo, so legibility doesn't depend on tinting
+   the photo itself. */
+.about-hero {
+  position: relative;
+  min-height: 460px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.about-hero-photo {
+  position: absolute;
+  inset: 0;
+  background-image: url("/images/about-bg01.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.about-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 96px 24px;
+}
+
+.about-hero-text {
+  max-width: 480px;
+  background: #fff;
+  color: #111;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.about-hero-text h1 {
+  font-size: 38px;
+  line-height: 1.2;
+  margin: 0 0 16px;
+}
+
+.about-hero-text p {
+  max-width: 440px;
+  margin: 0 0 14px;
+  font-size: 1.05em;
+  line-height: 1.55;
+  color: #333;
+}
+
+.about-hero-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* Inline emphasis spans for heading copy — introduced here for "Pockit
+   is a digital wellbeing company." (Pockit set like the nav's own
+   monospace wordmark treatment; "digital" struck through to read as
+   the thing being rejected) but generic enough to reuse in any other
+   heading that wants the same brand-name or strikethrough emphasis. */
+.h2-brand {
+  font-family: 'Source Code Pro', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.h2-strike {
+  text-decoration: line-through;
+}
+
+@media (max-width: 640px) {
+  .about-hero {
+    min-height: 380px;
+  }
+
+  .about-hero-text {
+    padding: 28px;
+  }
+
+  .about-hero-text h1 {
+    font-size: 28px;
+  }
+}
+
+/* ── "It works." panel (src/about/index.njk) ───────────────────────
+   A white card floating on the section's own full-bleed grey
+   (.page-section--alt) background — bound to the same max-width as
+   the three feature panels in the section above (.page-section-inner
+   --wide's var(--content-max-width)), so its edges line up with
+   theirs. The photo sits flush against the card's own bottom edge
+   (a negative margin cancelling just the card's own bottom padding),
+   while the copy beside it keeps the card's normal padding — and a
+   numbered list with green numerals, echoing the brand green used
+   everywhere else on the site instead of plain black markers. */
+.origin-panel {
+  display: flex;
+  align-items: flex-end;
+  gap: 48px;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 48px;
+  background-color: #fff;
+  background-image: url("/images/origin-bg01.jpg");
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  /* Contains the photo's own drop-shadow below (see .origin-photo
+     img), which would otherwise bleed past the card's flush bottom
+     edge onto the grey page background beneath it. */
+  overflow: hidden;
+}
+
+.origin-photo {
+  /* Same width as one of the three feature panels above: their
+     container shares this panel's own max-width (var(--content-max-
+     width)), split into three columns with two 24px gaps (see
+     .feature-grid). */
+  flex: 0 0 calc((var(--content-max-width) - 48px) / 3);
+  /* Cancels the card's own bottom padding so the image's bottom edge
+     lands flush on the card's bottom edge instead of floating 48px
+     above it like the copy column does. */
+  margin-bottom: -48px;
+}
+
+.origin-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* A wide, soft shadow under the cutout — filter: drop-shadow follows
+     the image's own alpha silhouette rather than a plain rectangle,
+     so it reads as the hand/book casting a shadow on the wood rather
+     than a boxy shadow around the whole image. */
+  filter: drop-shadow(0 20px 24px rgba(0, 0, 0, 0.35));
+}
+
+/* Flex row itself now — the text keeps the card's own padding, while
+   .origin-copy-photo (added later, see below) bleeds to this card's
+   right/top/bottom edges with none of its own, the same "full-bleed
+   column, overflow: hidden clips it to the rounded corner" trick as
+   .founder-photo-col uses in the founder section below. */
+.origin-copy {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.origin-copy-text {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 32px;
+}
+
+/* Fixed-width column so its height: 100% below has something definite
+   to stretch against (this card's own height, set by .origin-copy-
+   text's content) rather than fighting the image's own aspect ratio
+   for space. Hidden below the panel's own stacking breakpoint — see
+   the media query below — since a narrow single column leaves no
+   sensible width for a second photo beside the "It works." copy. */
+.origin-copy-photo {
+  flex: 0 0 140px;
+}
+
+.origin-copy-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.origin-title {
+  margin: 0 0 20px;
+  /* Matches .about-hero-text h1's own size — this panel's copy is
+     meant to read as boldly as the hero, not as a smaller subsection. */
+  font-size: 38px;
+}
+
+/* Numbers set larger than body copy and in the brand green — this
+   list is the section's main point, not fine print, so it reads at a
+   size up from everything else on the page. */
+.origin-list {
+  margin: 0;
+  padding: 0 0 0 1.4em;
+}
+
+.origin-list li {
+  margin-bottom: 12px;
+  font-size: 1em;
+  line-height: 1.5;
+  color: #222;
+}
+
+.origin-list li:last-child {
+  margin-bottom: 0;
+}
+
+.origin-list li::marker {
+  font-weight: 700;
+  color: var(--brand-green);
+}
+
+.origin-note {
+  margin-top: 28px;
+}
+
+.origin-note-lead {
+  margin: 0 0 8px;
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #111;
+}
+
+.origin-note-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #666;
+}
+
+@media (max-width: 860px) {
+  .origin-panel {
+    flex-direction: column;
+    align-items: flex-start;
+    /* No bottom padding — the photo (now last, see .origin-photo's
+       own order: 2 below) sits flush on the panel's own bottom edge
+       instead of floating above a gap. */
+    padding: 32px 32px 0;
+  }
+
+  .origin-photo {
+    flex: 0 0 auto;
+    /* Full width of the panel (minus its own left/right padding,
+       inherited from .origin-panel) rather than the desktop column's
+       narrow fixed 160px. */
+    width: 100%;
+    /* Stacked above the copy rather than beside it here, so the
+       desktop bleed-to-the-bottom-edge trick no longer applies. */
+    margin-bottom: 0;
+    /* Below the copy now (order: 2, vs. .origin-copy's order: 1
+       below) rather than DOM order's usual above-it placement — the
+       copy is the actual point of this panel, the photo a supporting
+       image underneath it. */
+    order: 2;
+  }
+
+  /* No room for a second photo beside the "It works." copy once the
+     panel itself is down to a single narrow column. */
+  .origin-copy-photo {
+    display: none;
+  }
+
+  /* Desktop's flex: 1 1 0 + overflow: hidden (sized for the ROW
+     layout's horizontal main axis) collapses to near-zero height
+     here instead — in a column, flex-basis: 0 sizes along the
+     VERTICAL axis, and overflow: hidden strips the automatic
+     min-height that would otherwise protect the text's actual
+     content height, so the card and its heading/list/note effectively
+     disappear. flex: 0 0 auto + width: 100% + overflow: visible
+     restores its natural, full-width, content-sized height instead. */
+  .origin-copy {
+    order: 1;
+    flex: 0 0 auto;
+    width: 100%;
+    overflow: visible;
+  }
+
+  /* The large-screen sizes above (matching the hero heading, 1.3em
+     list/lead) are sized for this panel sitting wide, three-panels-
+     wide on desktop — scaled back down once it stacks into a single
+     narrow column. */
+  .origin-title {
+    font-size: 26px;
+  }
+
+  .origin-list li {
+    font-size: 15px;
+  }
+
+  .origin-note-lead {
+    font-size: 14px;
+  }
+}
+
+/* ── Founder section (src/about/index.njk) ─────────────────────────
+   One white panel — same "bound to the section's max-width, floating
+   on the .page-section--alt grey" treatment as the "It works." panel
+   above, so the two sit back to back rather than alternating white/
+   grey like the rest of the page. Two stacked bands rather than
+   side-by-side columns: photo + bio on top, video full-width below.
+   A 16:9 video and a tall photo/bio block don't share a natural
+   height, so an earlier three-column attempt left the video shrunk
+   to whatever height the row ended up (set by the taller text) with
+   dead padding above/below it — stacking lets the video size itself
+   off the panel's own width instead. The copy is reused verbatim
+   from the Saved project's own About page founder bio (same person,
+   same words), not rewritten for this site. */
+.founder-panel {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+.founder-top {
+  display: flex;
+  align-items: stretch;
+}
+
+/* Same padding as .founder-video below (40px 48px 48px) rather than
+   bleeding to the panel's edges, and the image itself rounded to
+   match .founder-video-frame — a framed photo, not a full-bleed one.
+   Still stretches to match .founder-text's height. */
+.founder-photo-col {
+  flex: 0 0 280px;
+  padding: 40px 48px 48px;
+}
+
+.founder-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* No left padding of its own — the gap to the photo beside it now
+   comes from .founder-photo-col's own right padding instead, so the
+   two don't stack into a doubled gap. */
+.founder-text {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 48px 48px 48px 0;
+}
+
+.founder-label-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.founder-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #999;
+}
+
+/* Overrides .page-section-inner h2's own centred, 28px default (see
+   above) — this heading sits left-aligned beside its own paragraph
+   copy rather than centred above a full-width section. */
+.founder-text h2 {
+  margin: 0 0 16px;
+  font-size: 28px;
+  text-align: left;
+}
+
+/* :not(.founder-label) — .founder-label is itself a <p>, and without
+   this exclusion its higher-specificity match here was overriding
+   .founder-label's own font-size/margin/color (the bug the two rules
+   below used to patch around one property at a time; excluding it
+   here instead means .founder-label's own rule just applies, no
+   patching needed). Only one paragraph left in this column now (the
+   bio), so a flat margin: 0 rather than a last-of-type dance. */
+.founder-text p:not(.founder-label) {
+  margin: 0;
+  font-size: 1.1em;
+  line-height: 1.7;
+  color: #333;
+}
+
+.founder-link {
+  font-size: 13px;
+  font-weight: 400;
+  color: #666;
+  text-decoration: none;
+}
+
+.founder-link:hover {
+  color: var(--brand-green);
+  text-decoration: underline;
+}
+
+/* Full panel width, so the video sizes itself off that width rather
+   than a squeezed leftover column — a single uniform top inset below
+   .founder-top regardless of whether the photo or the text ends up
+   taller on the row above it. */
+.founder-video {
+  padding: 40px 48px 48px;
+}
+
+/* Padding-bottom percentage trick would need JS for aspect-ratio
+   fallback support this site doesn't otherwise need — every browser
+   in scope for this site already supports aspect-ratio directly. */
+.founder-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+.founder-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.founder-video-caption {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  color: #666;
+}
+
+@media (max-width: 860px) {
+  .founder-top {
+    flex-direction: column;
+  }
+
+  .founder-photo-col {
+    flex: 0 0 auto;
+    /* First in .founder-top's DOM order already puts it at the top of
+       the stacked column — square now instead of desktop's wide,
+       fixed-220px-tall crop. */
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    padding: 24px 28px;
+  }
+
+  .founder-text {
+    padding: 28px;
+  }
+
+  .founder-video {
+    padding: 24px 28px 28px;
+  }
+}
+
+/* ── Site footer (src/_includes/footer.njk) ───────────────────────
+   Reusable across every page on layouts/base.njk, same as the nav. */
+.site-footer {
+  border-top: 1px solid #eee;
+  background: #fff;
+}
+
+.site-footer-inner {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 48px 24px 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.site-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 260px;
+}
+
+.site-footer-logo {
+  width: 32px;
+  height: 32px;
+}
+
+.site-footer-brand p {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.site-footer-links-heading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+/* Same monospace face as the header nav's own links (.site-nav-links
+   a), for consistency between the two link lists. */
+.site-footer-links a {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 13px;
+  color: #444;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.site-footer-links a:hover {
+  color: var(--brand-green);
+}
+
+/* Same active-page treatment as the header nav (.site-nav-links
+   a.is-active) — uppercase now lives on the base rule above so it
+   applies whether or not a link is active. */
+.site-footer-links a.is-active {
+  font-weight: 700;
+}
+
+/* Note / Book — same "not ready yet" treatment as the header nav
+   (see .site-nav-link--soon): muted grey, no green hover, asterisked,
+   explained by the small caption below the list. */
+.site-footer-links a.site-footer-link--soon,
+.site-footer-links a.site-footer-link--soon:hover {
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+.site-footer-soon-note {
+  margin-top: 4px;
+  font-size: 11px;
+  font-style: italic;
+  color: #aaa;
+}
+
+/* Brand takes the full row and wraps first (flex-wrap is already set
+   above), pushing Products/Company onto their own row where
+   justify-content: space-between spreads them to opposite edges —
+   Products left, Company right, both below the logo/tagline. */
+@media (max-width: 640px) {
+  .site-footer-brand {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+.site-footer-bottom {
+  margin-top: 40px;
+  padding: 20px 24px;
+  border-top: 1px solid #eee;
+}
+
+.site-footer-bottom p {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+}
+
+/* ── Contact modal (src/_includes/modal-contact.njk) ───────────────
+   No separate /contact/ page — every "Contact"/"Get in touch" link on
+   the site (nav, footer, the About page's CTA band) opens this modal
+   instead, same approach as the Saved project's own contact modal
+   (see src/js/custom.js for the open/close + Formspree submit logic),
+   just restyled to Pockit's own brand rather than Saved's. */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.4);
+  /* Blurs whatever's behind the overlay, not just dimming it. */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow: auto;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.modal[aria-hidden="false"] {
+  visibility: visible;
+  opacity: 1;
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  /* Flex centering above (align-items: center) already centres this
+     vertically when it fits; this margin only comes into play once
+     the content's taller than the viewport and the modal has to
+     scroll, so it doesn't get jammed flush against the top edge. */
+  margin: 24px 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+}
+
+.modal-content.animate-in {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: #111;
+  background: #f2f2f2;
+}
+
+.modal-scroll {
+  padding: 48px 40px 40px;
+}
+
+.form-container h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+.form-subtitle {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.form-control {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  color: #111;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--brand-green);
+}
+
+.form-full textarea.form-control {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.form-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #999;
+}
+
+.form-note a {
+  color: #999;
+  text-decoration: underline;
+}
+
+.form-note a:hover {
+  color: var(--brand-green);
+}
+
+.form-status {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #c0392b;
+}
+
+.form-status:empty {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .modal-scroll {
+    padding: 40px 24px 32px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}

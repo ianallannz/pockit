@@ -1,0 +1,421 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-bg: #F6F6F6;
+  --sidebar-border: #C2C2C2;
+  --sidebar-width: 260px;
+  --preview-bg: #FAFAFA;
+  --input-bg: #fdfdfd;
+  --input-border: #D3D3D3;
+  --label-color: #111111;
+  --value-color: #111111;
+  --heading-color: #000;
+  /* Same fixed brand green as /course-builder's own --brand-green — the
+     sidebar's actual accent colour (checkboxes, range thumbs, button
+     hover borders), not the old --accent light-green fill this replaces. */
+  --brand-green: #00BB27;
+}
+
+body {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  /* Sora/Inter for the sidebar chrome, matching /course-builder — the
+     actual rendered note pages set their own explicit fonts (JetBrains
+     Mono/Inter/Lora, still loaded — see index.html) and #preview-wrap
+     below pins its own font-family back to the original monospace so
+     this change can't leak into them by inheritance. */
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  background: var(--preview-bg);
+  color: var(--value-color);
+}
+
+/* Shared by every real <button> in the sidebar — border replaced by a
+   soft shadow, one consistent corner radius. Matches /course-builder's
+   own base `button` rule so Print reads as the same kind of control. */
+button {
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid #ddd;
+  box-shadow: 3px 0 10px 1px rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#sidebar-header {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid #ddd;
+}
+
+#brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#brand-logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+#brand-text { min-width: 0; }
+
+#sidebar-header h1 {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--heading-color);
+}
+
+#sidebar-header p {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #444;
+  letter-spacing: 0.05em;
+}
+
+/* No divider between groups (matching /course-builder's own borderless
+   .param-group) — sections are set apart by padding/whitespace alone;
+   a border is reserved for the header above and Print below, which
+   bookend the sidebar rather than sitting among its ordinary sections. */
+.param-group {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.param-group.collapsed { gap: 0; }
+
+#sidebar h2 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #111;
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.param-group:not(.no-collapse) h2 { cursor: pointer; }
+
+.param-group:not(.no-collapse) h2::after {
+  content: '▾';
+  font-size: 10px;
+  letter-spacing: 0;
+  transition: transform 0.15s;
+}
+
+.param-group.collapsed h2::after { transform: rotate(-90deg); }
+.param-group.collapsed .param-row { display: none; }
+
+.param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Controls are styled by where they live (the sidebar), not by their
+   wrapper — matches /course-builder's own convention. */
+#sidebar label {
+  display: block;
+  color: var(--label-color);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+#sidebar input[type="text"],
+#sidebar input[type="number"],
+#sidebar select {
+  height: 32px;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: var(--value-color);
+  padding: 7px 7px;
+  font-family: inherit;
+  font-size: 11px;
+  width: 100%;
+  outline: none;
+  appearance: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+}
+
+#sidebar input[type="text"]:focus,
+#sidebar input[type="number"]:focus,
+#sidebar select:focus { border-color: #555; }
+
+/* appearance: none above also strips the native dropdown arrow — drawn
+   back in here so a select still reads as a select. */
+#sidebar select {
+  height: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+  cursor: pointer;
+}
+
+#sidebar input[type="color"] {
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+  padding: 2px;
+  height: 28px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.param-row.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-row.inline label {
+  color: var(--value-color);
+  cursor: pointer;
+}
+
+#sidebar input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--brand-green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#sidebar input[type="checkbox"]:disabled,
+#sidebar input[type="checkbox"]:disabled + label {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+#warning {
+  font-size: 10px;
+  color: #a06040;
+  display: none;
+  padding: 4px 0 0;
+}
+
+/* Custom thumb/track, matching /course-builder's own range input style —
+   flat grey track (no native OS accent look) with a brand-green thumb. */
+input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-progress {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--brand-green);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-green);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+input[type="range"]:focus { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb,
+input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(0, 187, 39, 0.25);
+}
+
+/* Pinned to the sidebar's own bottom edge, same shape as
+   /course-builder's #present-panel-group/#present-actions/#present-btn. */
+#print-actions-group {
+  margin-top: auto;
+  border-top: 1px solid #ddd;
+}
+
+#print-actions {
+  padding: 10px 16px;
+  display: flex;
+}
+
+#print-btn {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid transparent;
+  color: #111;
+  padding: 0 7px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#print-btn:hover { background: #fff; border-color: var(--brand-green); }
+
+#print-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#quoteList {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.quote-item {
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 10px;
+  line-height: 1.4;
+  cursor: grab;
+  user-select: none;
+  color: var(--value-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quote-item:active { cursor: grabbing; }
+
+.quote-item.drag-over {
+  border-color: #888;
+  background: var(--input-border);
+}
+
+/* ── Preview (untouched — see js/note-designer.js for how these render;
+   font-family pinned back to the original monospace stack so body's
+   Sora/Inter change above can't inherit down into it). ── */
+#preview-wrap {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  padding: 48px;
+}
+
+#preview {
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+  align-items: center;
+}
+
+.spread-label {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #aaaaaa;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.spread-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.spread {
+  display: flex;
+  flex-direction: row;
+}
+
+.page {
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* ── Print ── */
+#print-layout { display: none; }
+
+@media print {
+  body {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  #sidebar { display: none; }
+  #preview-wrap { display: none; }
+
+  #print-layout {
+    display: block;
+  }
+
+  .print-spread-wrap {
+    page-break-after: always;
+    width: 210mm;
+    height: 297mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .print-spread-label { display: none; }
+}

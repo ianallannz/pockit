@@ -1,0 +1,33 @@
+<nav class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-logo" href="/" aria-label="Pockit home">
+      <img src="/images/pockit-logo.png" alt="Pockit">
+    </a>
+
+    <ul class="site-nav-links site-nav-links--left">
+      <li><a href="/course/" class="{{ 'is-active' if page.url.startsWith('/course/') }}">Course</a></li>
+      <li><a class="site-nav-link--soon {{ 'is-active' if page.url.startsWith('/note-builder/') }}">Note*</a></li>
+      <li><a class="site-nav-link--soon {{ 'is-active' if page.url.startsWith('/book/') }}">Book*</a></li>
+    </ul>
+
+    <span class="site-nav-soon-note">*Full reveal coming soon</span>
+
+    <ul class="site-nav-links site-nav-links--right">
+      <li><a href="/about/" class="{{ 'is-active' if page.url.startsWith('/about/') }}">About</a></li>
+      <li><a href="#modal-contact" data-modal-open="modal-contact">Contact</a></li>
+    </ul>
+
+    <!-- Mobile-only hamburger/close toggle — hidden above the 640px
+         breakpoint, where the two <ul> lists above just render inline
+         as normal. Below it, this button shows instead of them, and
+         toggling body.is-nav-open (see custom.js) turns .site-nav-
+         inner itself into a full-screen overlay showing the SAME
+         lists (see custom.css), rather than duplicating the nav
+         links into separate mobile-only markup. -->
+    <button type="button" class="site-nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span class="site-nav-toggle-bar"></span>
+      <span class="site-nav-toggle-bar"></span>
+      <span class="site-nav-toggle-bar"></span>
+    </button>
+  </div>
+</nav>

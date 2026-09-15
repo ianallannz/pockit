@@ -8,29 +8,565 @@
     <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon-256x256.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Inter:wght@400;600;700&family=Sora:wght@400;600;700;800&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/custom.css">
     <meta name="theme-color" content="#F4F4F4">
     <!-- SEO basics -->
-    <meta name="description" content="The smartphone book publisher.">
+    <meta name="description" content="Smartphone-sized publishing — pocket courses, notebooks and books made to be held, not scrolled. An embarrassingly simple answer to device addiction.">
     <meta name="keywords" content="Pockit, books, mini, smartphone-sized, digital addiction, study, notes, courses">
     <meta name="author" content="Ian Allan">
     <!-- Open Graph (Facebook, LinkedIn, etc.) -->
     <meta property="og:title" content="Pockit">
-    <meta property="og:description" content="The smartphone book publisher.">
+    <meta property="og:description" content="Smartphone-sized publishing — pocket courses, notebooks and books made to be held, not scrolled. An embarrassingly simple answer to device addiction.">
     <meta property="og:image" content="https://www.pockit.works/images/pockit-social-share.jpg">
     <meta property="og:url" content="https://www.pockit.works">
     <meta property="og:type" content="website">
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Pockit">
-    <meta name="twitter:description" content="The smartphone book publisher.">
+    <meta name="twitter:description" content="Smartphone-sized publishing — pocket courses, notebooks and books made to be held, not scrolled. An embarrassingly simple answer to device addiction.">
     <meta name="twitter:image" content="https://www.pockit.works/images/pockit-social-share.jpg">
 
 </head>
 
 <body class="">
+    <nav class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-logo" href="/" aria-label="Pockit home">
+      <img src="/images/pockit-logo.png" alt="Pockit">
+    </a>
+
+    <ul class="site-nav-links site-nav-links--left">
+      <li><a href="/course/" class="">Course</a></li>
+      <li><a class="site-nav-link--soon ">Note*</a></li>
+      <li><a class="site-nav-link--soon ">Book*</a></li>
+    </ul>
+
+    <span class="site-nav-soon-note">*Full reveal coming soon</span>
+
+    <ul class="site-nav-links site-nav-links--right">
+      <li><a href="/about/" class="">About</a></li>
+      <li><a href="#modal-contact" data-modal-open="modal-contact">Contact</a></li>
+    </ul>
+
+    <!-- Mobile-only hamburger/close toggle — hidden above the 640px
+         breakpoint, where the two <ul> lists above just render inline
+         as normal. Below it, this button shows instead of them, and
+         toggling body.is-nav-open (see custom.js) turns .site-nav-
+         inner itself into a full-screen overlay showing the SAME
+         lists (see custom.css), rather than duplicating the nav
+         links into separate mobile-only markup. -->
+    <button type="button" class="site-nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span class="site-nav-toggle-bar"></span>
+      <span class="site-nav-toggle-bar"></span>
+      <span class="site-nav-toggle-bar"></span>
+    </button>
+  </div>
+</nav>
+
     
-<h1>Welcome to Pockit</h1>
+<section class="hp-hero">
+  <div class="hp-hero-photo"></div>
+
+  <div class="hp-hero-inner">
+    <!-- The shadow lives on this wrapper (filter: drop-shadow follows
+         the clipped panel's actual visible silhouette, island cutout
+         included) rather than on the panel itself — a plain box-
+         shadow would just get clipped away along with everything
+         else outside .hp-hero-panel's own clip-path. -->
+    <div class="hp-hero-panel-shadow">
+      <div class="hp-hero-panel">
+        <h1>Believe</h1>
+        <p>Our future creative leaders will be those who don't view the world through this screen.</p>
+
+        <a class="hp-hero-scroll" href="#hp-next" aria-label="Scroll down">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="hp-next" class="hp-better-section">
+  <!-- Tall track (100vh per slide) with a sticky-pinned inner layer —
+       scrolling through the track's own extra height steps through
+       the carousel (see src/js/custom.js), and once the track's
+       height is used up the section scrolls away and the page
+       continues normally. Deliberately not wheel-event hijacking:
+       this drives off real scroll position, so trackpad/mobile/
+       keyboard scrolling all just work as they normally would. -->
+  <div class="hp-better-track">
+    <div class="hp-better-sticky">
+      <div class="hp-better-wrap">
+        <div class="hp-better-carousel">
+          <div class="hp-better-slide is-active">
+            <img class="hp-better-img--1" src="/images/hp-better-01.jpg" alt="Three commuters on a train, all checking their phones instead of each other.">
+            <div class="hp-better-frame hp-better-frame--1">
+              <div class="hp-better-frame-text">
+                <p>We won't solve our problems this way.</p>
+              </div>
+              <div class="hp-better-frame-window"></div>
+            </div>
+          </div>
+
+          <div class="hp-better-slide">
+            <img class="hp-better-img--2" src="/images/hp-better-02.jpg" alt="A busy cafe, a man checking his phone at a crowded table.">
+            <div class="hp-better-frame hp-better-frame--2">
+              <div class="hp-better-frame-text">
+                <p>We're better than this.</p>
+              </div>
+              <div class="hp-better-frame-window"></div>
+            </div>
+          </div>
+
+          <div class="hp-better-slide">
+            <img class="hp-better-img--3" src="/images/hp-better-03.jpg" alt="A woman checking her phone at a table stacked with books.">
+            <div class="hp-better-frame hp-better-frame--3">
+              <div class="hp-better-frame-text">
+                <p>It doesn't actually matter.</p>
+              </div>
+              <div class="hp-better-frame-window"></div>
+            </div>
+          </div>
+
+          <div class="hp-better-dots">
+            <button type="button" class="hp-better-dot is-active" data-slide="0" aria-label="Show slide 1"></button>
+            <button type="button" class="hp-better-dot" data-slide="1" aria-label="Show slide 2"></button>
+            <button type="button" class="hp-better-dot" data-slide="2" aria-label="Show slide 3"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Decorative hand-drawn-style wobbly line starting from the bottom
+     edge of .hp-better-carousel itself (not the outer .hp-better-
+     section, which has extra empty space below the carousel from its
+     own sticky-viewport height) — same breakout technique as
+     .hero-arrow on /course (see custom.css): a zero-height div right
+     after the carousel section, with the SVG absolutely positioned
+     (shifted up via top: -132px to reach back up to the carousel's
+     own bottom edge) and tall enough to paint down through the next
+     two sections' normal document flow via overflow: visible.
+     Coordinates are plain px, calibrated against this page's actual
+     rendered layout at a ~1420px desktop viewport; hidden on
+     narrower screens where the sections reflow and the fixed offsets
+     no longer line up. -->
+<div class="hp-wobble-arrow" aria-hidden="true">
+  <svg width="1415" height="540" viewBox="0 0 1415 540">
+    <path class="hp-wobble-arrow-curl" d="
+      M 883 10
+      C 800 60, 900 110, 780 170
+      C 660 230, 620 260, 780 320
+      C 850 365, 800 420, 700 430
+      C 600 440, 530 460, 540 520
+    "/>
+    <polygon class="hp-wobble-arrow-head" points="534,514 546,514 540,526"/>
+  </svg>
+</div>
+
+<section class="page-section hp-so-what-then">
+  <div class="page-section-inner">
+    <h2>So what then?</h2>
+  </div>
+</section>
+
+<section class="page-section hp-products-section">
+  <div class="page-section-inner page-section-inner--wide page-section-inner--intro-left">
+    <h1>Books. Smartphone-sized books.</h1>
+    <p class="page-section-intro">Real meatspace books and DIY publishing tools to create your own.</p>
+
+    <div class="hp-product-grid">
+      <div class="hp-product-column">
+        <!-- The exact card-behind-cover markup from the /course hero's
+             own .hero-card-stack (same classes, full wireframe card
+             detail, true mm size) — just with the card's own peek
+             tightened way down (see .hp-product-visual--course's
+             overrides below) instead of the hero's own dramatic fanned
+             offset, so it doesn't dominate a three-up row. Sits above
+             the panel, not inside it. -->
+        <div class="hp-product-visual hp-product-visual--course">
+          <div class="hero-card-stack">
+            <div class="hero-card-back"></div>
+
+            <div class="hero-card">
+              <div class="hero-card-header">
+                <div class="hero-card-punch"></div>
+                <div class="hero-card-header-stack">
+                  <div class="hero-card-header-text">Getting Started</div>
+                  <div class="hero-card-lesson-count">1 of 2</div>
+                </div>
+              </div>
+
+              <div class="hero-card-body">
+                <span class="hero-card-wire-heading"></span>
+
+                <div class="hero-card-wire-text">
+                  <span class="hero-card-wire-line"></span>
+                  <span class="hero-card-wire-line"></span>
+                  <span class="hero-card-wire-line is-short"></span>
+                </div>
+
+                <div class="hero-card-wire-image">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <circle cx="8.5" cy="10" r="1.5"/>
+                    <path d="M21 16l-5-5-6 6-2-2-5 4"/>
+                  </svg>
+                </div>
+
+                <div class="hero-card-wire-text">
+                  <span class="hero-card-wire-line"></span>
+                  <span class="hero-card-wire-line is-short"></span>
+                </div>
+
+                <div class="hero-card-wire-link">
+                  <div class="hero-card-wire-text hero-card-wire-link-text">
+                    <span class="hero-card-wire-line is-short"></span>
+                    <span class="hero-card-wire-line"></span>
+                  </div>
+                  <svg class="hero-card-wire-qr" viewBox="0 0 24 24">
+                    <rect x="1" y="1" width="6" height="6"/>
+                    <rect x="3" y="3" width="2" height="2"/>
+                    <rect x="17" y="1" width="6" height="6"/>
+                    <rect x="19" y="3" width="2" height="2"/>
+                    <rect x="1" y="17" width="6" height="6"/>
+                    <rect x="3" y="19" width="2" height="2"/>
+                    <rect x="8" y="2" width="2" height="2"/>
+                    <rect x="10" y="2" width="2" height="2"/>
+                    <rect x="8" y="6" width="2" height="2"/>
+                    <rect x="12" y="6" width="2" height="2"/>
+                    <rect x="14" y="6" width="2" height="2"/>
+                    <rect x="4" y="8" width="2" height="2"/>
+                    <rect x="10" y="8" width="2" height="2"/>
+                    <rect x="12" y="8" width="2" height="2"/>
+                    <rect x="14" y="8" width="2" height="2"/>
+                    <rect x="18" y="8" width="2" height="2"/>
+                    <rect x="20" y="8" width="2" height="2"/>
+                    <rect x="2" y="10" width="2" height="2"/>
+                    <rect x="4" y="10" width="2" height="2"/>
+                    <rect x="6" y="10" width="2" height="2"/>
+                    <rect x="14" y="10" width="2" height="2"/>
+                    <rect x="16" y="10" width="2" height="2"/>
+                    <rect x="18" y="10" width="2" height="2"/>
+                    <rect x="20" y="10" width="2" height="2"/>
+                    <rect x="2" y="12" width="2" height="2"/>
+                    <rect x="4" y="12" width="2" height="2"/>
+                    <rect x="6" y="12" width="2" height="2"/>
+                    <rect x="14" y="12" width="2" height="2"/>
+                    <rect x="16" y="12" width="2" height="2"/>
+                    <rect x="2" y="14" width="2" height="2"/>
+                    <rect x="4" y="14" width="2" height="2"/>
+                    <rect x="6" y="14" width="2" height="2"/>
+                    <rect x="12" y="14" width="2" height="2"/>
+                    <rect x="12" y="16" width="2" height="2"/>
+                    <rect x="16" y="16" width="2" height="2"/>
+                    <rect x="18" y="16" width="2" height="2"/>
+                    <rect x="20" y="16" width="2" height="2"/>
+                    <rect x="8" y="18" width="2" height="2"/>
+                    <rect x="10" y="20" width="2" height="2"/>
+                    <rect x="12" y="20" width="2" height="2"/>
+                    <rect x="14" y="20" width="2" height="2"/>
+                    <rect x="16" y="20" width="2" height="2"/>
+                    <rect x="18" y="20" width="2" height="2"/>
+                    <rect x="20" y="20" width="2" height="2"/>
+                  </svg>
+                </div>
+
+                <div class="hero-card-wire-task">
+                  <span class="hero-card-wire-question"></span>
+                  <div class="hero-card-wire-answer">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hero-card-footer">
+                <div class="hero-card-footer-text">Pockit Course</div>
+                <div class="hero-card-number">1</div>
+              </div>
+            </div>
+
+            <div class="hero-cover-front">
+              <div class="hero-cover-front-info">
+                <div class="hero-cover-front-code">PKT-101</div>
+                <div class="hero-cover-front-title">Pockit Course Basics</div>
+                <div class="hero-cover-front-person">
+                  <div class="hero-cover-front-person-name">Ian Allan</div>
+                  <div class="hero-cover-front-person-role">Senior Lecturer, EIT</div>
+                </div>
+              </div>
+              <div class="hero-cover-front-mark"></div>
+              <div class="hero-cover-front-contact"><span>Name / Contact</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-item feature-item--course">
+          <h3>Pockit Course</h3>
+          <p>An ingenious DIY publishing tool for making tactile workbooks in our last-minute, chronically-distracted classrooms.</p>
+          <a class="feature-item-link" href="/course/">Discover the Pockit Course &rarr;</a>
+        </div>
+      </div>
+
+      <div class="hp-product-column">
+        <!-- A Field Notes-style notebook at the same true scale as the
+             course cover beside it — solid cover colour, a small
+             notch cut from the top-right corner revealing an
+             off-white paper colour beneath, and the same "Name /
+             Contact" write-in box as Course's own cover (reusing
+             .hero-cover-front-contact directly) rather than a
+             separate placeholder label. 10% wider than Course/Book
+             (see .hp-product-note's own width) rather than sharing
+             their 80:160 ratio, per the real product. -->
+        <div class="hp-product-visual hp-product-visual--note">
+          <div class="hp-product-note">
+            <!-- Procedural grain, not an image asset — feTurbulence
+                 generates the noise itself, so this filter needs no
+                 source content of its own; .hp-product-note-grain
+                 below is just an empty box for it to render into. -->
+            <svg width="0" height="0" style="position: absolute;">
+              <filter id="hp-note-grain">
+                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
+                <feColorMatrix type="saturate" values="0"/>
+              </filter>
+            </svg>
+            <div class="hp-product-note-grain"></div>
+            <div class="hp-product-note-notch"></div>
+            <div class="hp-product-note-elastic"></div>
+            <div class="hp-product-note-mark">
+              <span>PK</span>
+              <span>OI</span>
+              <span>CT</span>
+            </div>
+            <div class="hero-cover-front-contact"><span>Name | Intent | Date</span></div>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <h3>Pockit Note<span class="text-soon-mark">*</span></h3>
+          <p>Opinionated notebooks to help you think and get things done. DIY publishing or readymade, used in harmony with other Pockit products.</p>
+          <span class="feature-item-soon">* Full reveal coming soon</span>
+        </div>
+      </div>
+
+      <div class="hp-product-column">
+        <!-- Same cover treatment as Course's own (.hero-cover-front) —
+             brand mark, code/title panel, true 81×161mm size, and the
+             same bottom-left author line as Course's own person
+             credit — minus the "Name/Contact" write-in box, since a
+             published book's cover doesn't need one. Cover photo set
+             via the background-image override on .hp-product-visual--book
+             below. -->
+        <div class="hp-product-visual hp-product-visual--book">
+          <div class="hero-cover-front">
+            <div class="hero-cover-front-info">
+              <div class="hero-cover-front-title">Māori and Settler</div>
+              <div class="hero-cover-front-code">A story of the New Zealand war</div>
+              <div class="hero-cover-front-person">
+                <div class="hero-cover-front-person-name">G.A. Henty</div>
+              </div>
+            </div>
+            <div class="hero-cover-front-mark"></div>
+          </div>
+        </div>
+
+        <div class="feature-item feature-item--book">
+          <h3>Pockit Book<span class="text-soon-mark">*</span></h3>
+          <p>Books, smartphone-sized, too easy. Put one where your phone normally goes and rediscover time and space.</p>
+          <span class="feature-item-soon">* Full reveal coming soon</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Course is the only one of the three actually out — a spotlight
+     between the product grid and "Why smartphone-sized?" so it isn't
+     lost among Note/Book's own "revealed soon" placeholders above.
+     The two panels are copied verbatim from /course's own "What is a
+     Pockit Course?" .feature-grid-2 (same icon art, headings, copy)
+     — just the two panels, not that page's further 9-icon grid below
+     them — so this reads as a preview of that page rather than a
+     rewrite of it. -->
+<section class="page-section hp-course-spotlight">
+  <div class="page-section-inner page-section-inner--wide">
+    <h2>The Pockit Course: Available now!</h2>
+
+    <div class="feature-grid-2">
+      <div class="feature-item">
+        <div class="feature-item-art">
+          <!-- The same laptop-and-course-viewer construction as the
+               "Blend the physical and the digital" icon above. -->
+          <svg viewBox="0 0 400 240">
+            <rect width="400" height="240" fill="#f6f6f6"/>
+
+            <!-- Scaled down around the icon's centre for more padding
+                 around the laptop. -->
+            <g transform="translate(200 120) scale(0.82) translate(-200 -120)">
+              <rect x="20" y="20" width="360" height="196" rx="10" fill="#ececec" stroke="#ddd" stroke-width="2"/>
+              <rect x="30" y="30" width="340" height="180" rx="6" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
+              <rect x="10" y="219" width="380" height="10" rx="5" fill="#ececec" stroke="#ddd" stroke-width="2"/>
+              <rect x="180" y="222" width="40" height="4" rx="2" fill="#ddd"/>
+
+              <rect x="30" y="30" width="64" height="180" fill="#f2f2f2"/>
+              <rect x="42" y="46" width="36" height="8" rx="3" fill="var(--brand-green)"/>
+              <rect x="42" y="62" width="36" height="8" rx="3" fill="#ddd"/>
+              <rect x="42" y="78" width="36" height="8" rx="3" fill="#ddd"/>
+
+              <rect x="120" y="54" width="64" height="128" rx="5" fill="#fff" stroke="#ddd" stroke-width="2"/>
+              <line x1="128" y1="72" x2="168" y2="72" stroke="#ddd" stroke-width="3"/>
+              <line x1="128" y1="86" x2="152" y2="86" stroke="#e5e5e5" stroke-width="2"/>
+
+              <rect x="200" y="54" width="64" height="128" rx="5" fill="#fff" stroke="#ddd" stroke-width="2"/>
+              <line x1="208" y1="72" x2="248" y2="72" stroke="#ddd" stroke-width="3"/>
+              <line x1="208" y1="86" x2="232" y2="86" stroke="#e5e5e5" stroke-width="2"/>
+
+              <!-- Adding a block: a "+" affordance below the card's
+                   existing content opens a small block-type picker
+                   beneath it, echoing course-builder's own add-block
+                   toolbar. -->
+              <circle cx="232" cy="104" r="8" fill="var(--brand-green)"/>
+              <line x1="226" y1="104" x2="238" y2="104" stroke="#fff" stroke-width="2"/>
+              <line x1="232" y1="98" x2="232" y2="110" stroke="#fff" stroke-width="2"/>
+              <path d="M232 112 L237 118 L227 118 Z" fill="#fff" stroke="#ddd" stroke-width="1.5" stroke-linejoin="round"/>
+              <rect x="198" y="118" width="68" height="16" rx="4" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
+              <rect x="210" y="122" width="9" height="9" rx="1" fill="#eee"/>
+              <rect x="222" y="122" width="9" height="9" rx="1" fill="#eee"/>
+              <rect x="234" y="122" width="9" height="9" rx="1" fill="var(--brand-green)"/>
+              <rect x="246" y="122" width="9" height="9" rx="1" fill="#eee"/>
+
+              <rect x="280" y="54" width="64" height="128" rx="5" fill="#fff" stroke="#ddd" stroke-width="2"/>
+              <line x1="288" y1="72" x2="328" y2="72" stroke="#ddd" stroke-width="3"/>
+              <line x1="288" y1="86" x2="312" y2="86" stroke="#e5e5e5" stroke-width="2"/>
+            </g>
+          </svg>
+        </div>
+        <h3><span class="feature-item-number">1.</span> Create lesson cards</h3>
+        <p>
+          A Pockit Course is made up of sets of lesson cards, rapidly built using a just-right collection of learning blocks.</p>
+          <p>A lesson can be just a few cards, but you can make as many as you like. </p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-item-art">
+          <!-- A landscape A4 sheet, two cards printed 2-up (course-
+               builder's print output) — then, to its right, the
+               course cover and cards, same fanned technique as icon 2
+               above, as if freshly cut from that sheet. -->
+          <svg viewBox="0 0 400 240">
+            <rect width="400" height="240" fill="#f6f6f6"/>
+
+            <rect x="20" y="49" width="200" height="142" rx="4" fill="#fff" stroke="#ddd" stroke-width="2"/>
+            <!-- Folded corner, tucked inward. -->
+            <path d="M196 49 L196 73 L220 73 Z" fill="#e5e5e5" stroke="#ddd" stroke-width="1"/>
+            <line x1="196" y1="49" x2="220" y2="73" stroke="#ccc" stroke-width="1"/>
+
+            <rect x="66" y="72" width="48" height="96" rx="2" fill="#fff" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <line x1="66" y1="84" x2="114" y2="84" stroke="#eee" stroke-width="1"/>
+            <line x1="66" y1="156" x2="114" y2="156" stroke="#eee" stroke-width="1"/>
+            <rect x="126" y="72" width="48" height="96" rx="2" fill="#fff" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <line x1="126" y1="84" x2="174" y2="84" stroke="#eee" stroke-width="1"/>
+            <line x1="126" y1="156" x2="174" y2="156" stroke="#eee" stroke-width="1"/>
+
+            <rect x="297" y="52" width="64" height="118" rx="7" fill="#fff" stroke="#ddd" stroke-width="2.3" transform="rotate(11 329 111)"/>
+            <rect x="284" y="56" width="64" height="118" rx="7" fill="#fff" stroke="#ddd" stroke-width="2.3" transform="rotate(6 316 115)"/>
+            <rect x="270" y="61" width="64" height="118" rx="7" fill="var(--brand-green)" stroke="none"/>
+            <line x1="284" y1="89" x2="320" y2="89" stroke="#fff" stroke-width="2.3"/>
+            <line x1="284" y1="103" x2="307" y2="103" stroke="#fff" stroke-width="2.3"/>
+          </svg>
+        </div>
+        <h3><span class="feature-item-number">2.</span> Print, cut, learn and treasure</h3>
+        <p>
+          Print your lesson cards, and at the start of your class your students mindfully cut them out and slot them into their Pockit Course folder.</p>
+          <p>Oh, and they're smartphone-sized, because of course they are.
+        </p>
+      </div>
+    </div>
+
+    <div class="hp-course-spotlight-cta">
+      <a class="hero-cta" href="/course/">Discover the Pockit Course</a>
+    </div>
+  </div>
+</section>
+
+<section class="page-section page-section--alt">
+  <div class="page-section-inner page-section-inner--wide page-section-inner--intro-left">
+    <h2>The medium is the message</h2>
+    <p class="page-section-intro">Cutting, holding, reading, and writing by hand plants you in your real world around and away from algorithmic concoctions.</p>
+    <p class="page-section-cta">It's the first step in <a href="/about/">reclaiming our value(s) &rarr;</a></p>
+  </div>
+</section>
+
+
+    <footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-brand">
+      <img src="/images/pockit-logo.png" alt="Pockit" class="site-footer-logo">
+      <p>The smartphone-sized publisher.</p>
+    </div>
+
+    <nav class="site-footer-links" aria-label="Products">
+      <span class="site-footer-links-heading">Products</span>
+      <a href="/course/" class="">Course</a>
+      <a class="site-footer-link--soon">Note*</a>
+      <a class="site-footer-link--soon">Book*</a>
+      <span class="site-footer-soon-note">*Full reveal coming soon</span>
+    </nav>
+
+    <nav class="site-footer-links" aria-label="Company">
+      <span class="site-footer-links-heading">Company</span>
+      <a href="/about/" class="">About</a>
+      <a href="#modal-contact" data-modal-open="modal-contact">Contact</a>
+    </nav>
+  </div>
+
+  <div class="site-footer-bottom">
+    <p>&copy; 2026 Pockit. All rights reserved.</p>
+  </div>
+</footer>
+
+    
+<div id="modal-contact" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-contact-title" inert>
+    <div class="modal-content">
+        <button type="button" class="modal-close" aria-label="Close contact form">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M2 2l16 16M18 2L2 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="modal-scroll">
+            <div class="form-container">
+                <h2 id="modal-contact-title">Get in touch</h2>
+                <p class="form-subtitle">Got a question, or just want to say hello? I'll reply.</p>
+
+                <form class="formspree-form" action="https://formspree.io/f/mnpqkaql" method="POST">
+                    <div class="form-row">
+                        <div class="form-col">
+                            <input type="text" name="name" class="form-control" placeholder="Name" required>
+                        </div>
+                        <div class="form-col">
+                            <input type="email" name="email" class="form-control" placeholder="Email address" required>
+                        </div>
+                    </div>
+                    <div class="form-full">
+                        <textarea name="message" class="form-control" placeholder="Your message" rows="6" required></textarea>
+                    </div>
+                    <input type="hidden" name="_subject" value="Message received through pockit.works">
+                    <button type="submit" class="hero-cta">Send message</button>
+                    <p class="form-note">You're directly contacting <a href="https://ianallannz.github.io" target="_blank" rel="noopener">Ian Allan on the East Coast, New Zealand</a>.</p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <script src="/js/custom.js" defer></script>
 </body>

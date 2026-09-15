@@ -1,0 +1,26 @@
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-brand">
+      <img src="/images/pockit-logo.png" alt="Pockit" class="site-footer-logo">
+      <p>The smartphone-sized publisher.</p>
+    </div>
+
+    <nav class="site-footer-links" aria-label="Products">
+      <span class="site-footer-links-heading">Products</span>
+      <a href="/course/" class="{{ 'is-active' if page.url.startsWith('/course/') }}">Course</a>
+      <a class="site-footer-link--soon">Note*</a>
+      <a class="site-footer-link--soon">Book*</a>
+      <span class="site-footer-soon-note">*Full reveal coming soon</span>
+    </nav>
+
+    <nav class="site-footer-links" aria-label="Company">
+      <span class="site-footer-links-heading">Company</span>
+      <a href="/about/" class="{{ 'is-active' if page.url.startsWith('/about/') }}">About</a>
+      <a href="#modal-contact" data-modal-open="modal-contact">Contact</a>
+    </nav>
+  </div>
+
+  <div class="site-footer-bottom">
+    <p>&copy; {{ currentYear }} Pockit. All rights reserved.</p>
+  </div>
+</footer>

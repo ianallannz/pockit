@@ -1,0 +1,4431 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-bg: #F6F6F6;
+  --sidebar-border: #C2C2C2;
+  --sidebar-width: 260px;
+  --workspace-bg: #FAFAFA;
+  --input-bg: #fdfdfd;
+  --input-border: #D3D3D3;
+  --label-color: #111111;
+  --value-color: #111111;
+  --heading-color: #000;
+  --accent: #d6e8d0;
+  /* The logo's own green (see images/pockit-logo.png) — a fixed brand
+     constant for hover/active borders on plain chrome buttons, distinct
+     from --punch-color: that one is a per-course param the user can
+     change (card punch/lesson-mark colour); this one shouldn't move just
+     because a course's punch colour does, even though the two happen to
+     share a default. */
+  --brand-green: #00BB27;
+  /* Optical centring for all-caps card text — see .card-header-text */
+  --cap-nudge: 0.055em;
+  /* Icons drawn on the card itself: block corners and link sources. */
+  --card-icon: #333333;
+  /* Hole-punch target in the card header. Fixed mm rather than grid-derived:
+     it has to match a physical punch, not the layout. */
+  --punch-size: 4mm;
+  --punch-left: 4mm;
+  --punch-gap: 2mm;
+}
+
+body {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  background: var(--workspace-bg);
+  color: var(--value-color);
+}
+
+/* ── Buttons (base) ──────────────────────────────────────────
+   The one shared rule every real <button> in the app now falls back to —
+   border replaced by a soft shadow, one consistent corner radius. A bare
+   element selector so it never outranks a class/id rule on specificity
+   alone; every button below that used to set its own border/border-radius
+   has had that declaration removed so it actually falls through to this
+   instead of silently overriding it. A few are deliberately left alone:
+   .segmented button (a joined multi-button control — a border-per-segment
+   is the thing that reads as "one switch," not three floating buttons)
+   and circular buttons like #profile-btn/#profile-avatar-btn (radius
+   overridden back to a circle on purpose, not a leftover). */
+button {
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* ── Profile ── */
+/* A floating "island" — independent of #sidebar/#workspace's own layout
+   (position: fixed, its own stacking context) rather than embedded in
+   either, so it stays put in the same top-right spot regardless of sidebar
+   scroll or which workspace view (cards/cover/present) is showing. Round
+   rather than the square .header-btn shape used elsewhere: this is the one
+   persistent, always-present control floating above everything else, not
+   a row-level action living inside some other panel. */
+#profile-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fff;
+  color: #444;
+  cursor: pointer;
+  overflow: hidden; /* clips #profile-btn-avatar to the circle */
+  transition: color 0.15s;
+}
+
+#profile-btn:hover { color: #333; }
+
+#profile-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Swapped in for #profile-btn-placeholder once a photo's been uploaded —
+   see updateProfileDetails(). */
+#profile-btn-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid #ddd;
+  box-shadow: 3px 0 10px 1px rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Mobile sidebar drawer ──────────────────────────────────────────
+   Below the breakpoint, #sidebar leaves the body's flex row (position:
+   fixed takes it out of flow, so #workspace's own flex: 1 just expands to
+   fill the freed width on its own — no extra rule needed for that) and
+   instead floats full-height to the left, mostly off-screen but for a
+   thin permanent PEEK_WIDTH sliver of its own real self (background,
+   border, shadow) as a "there's a panel here" affordance, rather than a
+   separate hamburger icon. #sidebar-peek-catcher is a transparent strip
+   exactly over that sliver, real content's own hit-targets otherwise
+   living right at that edge (course code input etc.) aren't what
+   actually receives an open-tap. See js/sidebar-mobile.js for the
+   swipe-gesture/tap-the-peek/tap-the-backdrop logic that adds/removes
+   .is-open and body.sidebar-open (PEEK_WIDTH there must match the 14px
+   here). */
+#sidebar-peek-catcher {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 52;
+  width: 14px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Hidden once open — the drawer itself covers this same strip at that
+   point, and its own real content underneath should take clicks again. */
+body.sidebar-open #sidebar-peek-catcher {
+  display: none;
+}
+
+/* Dims/catches taps on the rest of the app while the drawer is open —
+   display:none (not just opacity/pointer-events) when closed so it can
+   never intercept clicks on the desktop layout by mistake. */
+#sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+body.sidebar-open #sidebar-backdrop {
+  display: block;
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  #sidebar-peek-catcher {
+    display: block;
+  }
+
+  #sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    /* -100% would hide it completely — this leaves 14px of its own
+       right edge (background/border/shadow) still on-screen instead. */
+    transform: translateX(calc(-100% + 14px));
+    box-shadow: 3px 0 24px rgba(0, 0, 0, 0.25);
+    transition: transform 0.25s ease;
+  }
+
+  #sidebar.is-open {
+    transform: translateX(0);
+  }
+}
+
+#sidebar-header {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid #ddd;
+}
+
+#brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#brand-logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+#brand-text { min-width: 0; }
+
+#sidebar-header h1 {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--heading-color);
+}
+
+#sidebar-header p {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #444;
+  letter-spacing: 0.05em;
+}
+
+/* Pinned to the sidebar's own bottom edge — margin-top: auto pushes this
+   group (and #print-panel-group after it, which has no margin of its own)
+   there regardless of how much, or how little, is shown above. Sits here
+   (the first of the two pinned-to-bottom groups) rather than on
+   #print-panel-group so #print-panel still has somewhere to grow into as
+   it opens without the pair drifting away from the sidebar's bottom edge.
+   Account/storage status used to pin here too — now #profile-panel, off
+   #profile-btn, top-right — see that section below. */
+#present-panel-group { margin-top: auto; }
+
+#present-actions {
+  padding: 10px 16px;
+  display: flex;
+}
+
+#present-btn {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  color: #111;
+  padding: 0 7px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#present-btn:hover { background: #fff; border: 1px solid var(--brand-green); }
+
+#present-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Collapsed to nothing and clipped rather than [hidden] — see
+   openPrintPanel()/closePrintPanel() — so opening/closing it is an
+   animated reveal (same idea as #scratchpad-panel's width transition,
+   just height instead, since this one only ever needs to "lift up" a
+   short, bounded list rather than something arbitrarily wide). */
+/* box-sizing: border-box (global, top of file) is what lets max-height: 0
+   fully collapse this including its own padding/border, rather than
+   leaving a sliver showing while closed. */
+#print-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease, padding 0.2s ease;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--input-bg);
+}
+
+#print-panel.is-open {
+  max-height: 280px;
+  padding: 10px 16px;
+}
+
+/* A modifier on whatever's selected above (Lesson/cards or Course) rather
+   than another thing to select — set a little apart from it. */
+#print-blank-overleaf-row { margin-top: 4px; }
+
+/* #sidebar prefixed on both rules below to outrank #sidebar label's own
+   display:block — these are <label> elements too (so checkbox + text can
+   be one click target), but need the flex row #sidebar label would
+   otherwise override back to a stacked block, collapsing the gap. */
+#sidebar .print-option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--value-color);
+  cursor: pointer;
+}
+
+/* Hidden outright (not just disabled) while Cover is selected — see the
+   printModeCover change handler. Same specificity as #sidebar
+   .print-option-row above (one id, one class-or-attribute), so this has to
+   come *after* it in the file to actually win — equal specificity falls
+   back to source order, not just which one "sounds" more specific. */
+#print-blank-overleaf-row[hidden] { display: none; }
+
+#print-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 20px;
+}
+
+#sidebar .print-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--value-color);
+  cursor: pointer;
+}
+
+.print-card-row input[type="checkbox"] { flex-shrink: 0; }
+
+#print-actions {
+  padding: 10px 16px;
+  border-top: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--input-bg);
+}
+
+#print-btn {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fff;
+  color: #111;
+  padding: 0 7px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#print-btn:hover { background: #fff; border: 1px solid var(--brand-green); }
+
+#print-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Points down at rest ("reveals downward" would open below the button,
+   but this panel opens upward — see #print-panel — so it's flipped to
+   point up, into the panel, while open instead). */
+#print-panel-toggle svg { transition: transform 0.2s ease; }
+#print-panel-toggle.is-active svg { transform: rotate(180deg); }
+
+/* Lives inside the floating #profile-panel (opened from #profile-btn), not
+   the sidebar — the panel itself supplies the padding/background/border,
+   so this is just the row layout. Identity only (who's signed in) — which
+   storage backend is active lives in #storage-options above, not here.
+   Always shown, not feature-detected: unlike #storageModeVaultRow, sign-in
+   has no browser-support gap, just a "not configured yet" state (see
+   updateAccountStatus()) while no Supabase project exists. Last in the
+   panel — course/storage stuff first, identity at the bottom. */
+#account-status {
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#account-status-label {
+  font-size: 10px;
+  color: var(--label-color);
+  line-height: 1.4;
+}
+
+/* Full width for both "Sign in…" and "Sign out" — one consistent shape
+   rather than the old compact-button/icon-button split, closer to
+   #reset-settings-btn's weight than a small inline action. #share-preview-btn
+   shares it too — same "full-width, neutral, no invite/revoke needed" weight. */
+#account-status-action,
+#share-preview-btn {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #111;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#account-status-action:hover,
+#share-preview-btn:hover { background: #fff; border: 1px solid var(--brand-green); }
+
+/* Not yet configured (no Supabase project — see supabase-config.js): shown
+   disabled rather than hidden, so the panel doesn't silently change shape
+   once a project exists. */
+#account-status-action:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+#account-status-action:disabled:hover { background: #fff; }
+
+/* Always available, no sign-in required — see index.html's comment on
+   #profile-details. First in the panel now, so no border-top of its own —
+   see #account-status above for the identity block that moved to the
+   bottom. */
+#profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#profile-avatar-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Plain local storage has nowhere to put a photo (no activeAdapter.avatar
+   — see updateProfileDetails()) — same dimmed treatment as
+   #account-status-action:disabled. */
+#profile-avatar-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+#profile-avatar-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#profile-avatar-note {
+  font-size: 10px;
+  color: var(--label-color);
+  cursor: pointer;
+}
+
+#profile-avatar-note:hover { color: #333; }
+
+/* One radio group for all three storage backends — see index.html's
+   comment on #storage-options for why this replaced three separately-
+   evolved controls (a vault status row, an account row, a toggle button).
+   updateStorageOptions() keeps the checked radio and each option's detail
+   text in sync with activeAdapterKind; switchStorageMode() is what a
+   click actually does. */
+#storage-options {
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#storage-options h2 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+/* Scoped under #profile-panel (not just .storage-option-row alone) so this
+   beats #profile-panel label's display: block — .storage-option-row is
+   itself a <label>, and an id selector otherwise wins regardless of which
+   rule comes later in source order. Same class of bug as the input[type]
+   one above; same fix (chase down every id-scoped rule too broad for what
+   it was meant to catch). */
+#profile-panel .storage-option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Matches #sidebar's plain checkbox styling (size/accent-color) — radios
+   get the same treatment, just a different input type. */
+.storage-option-row input[type="radio"] {
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  accent-color: var(--brand-green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.storage-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.storage-option-text strong {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--value-color);
+}
+
+.storage-option-text small {
+  font-size: 9px;
+  color: var(--label-color);
+  line-height: 1.4;
+}
+
+/* Cloud, disabled until signed in — see updateStorageOptions(). Same
+   dimmed treatment as #account-status-action:disabled, applied to the
+   whole row via :has() since the row itself (not just the input) is what
+   visually needs to read as unavailable. */
+.storage-option-row:has(input:disabled) {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.param-group {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.param-group.collapsed { gap: 0; }
+
+/* Section headings look the same anywhere in the sidebar; only groups that
+   actually collapse get the affordance. */
+#sidebar h2 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #111;
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.param-group:not(.no-collapse) h2 { cursor: pointer; }
+
+.param-group:not(.no-collapse) h2::after {
+  content: '▾';
+  font-size: 10px;
+  letter-spacing: 0;
+  transition: transform 0.15s;
+}
+
+.param-group.collapsed h2::after { transform: rotate(-90deg); }
+.param-group.collapsed .param-row { display: none; }
+
+/* Settings is its own class rather than .param-group: shown/hidden outright
+   (as a whole, via the [hidden] attribute) from #course-settings-toggle up
+   by the course selector, swapping places with #lesson-group — see that
+   button's click handler — rather than the generic .param-group's own
+   collapse-in-place wiring. */
+.settings-group {
+  padding: 14px 16px;
+  border-top: 1px solid var(--sidebar-border);
+  border-bottom: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The id selector below outranks the UA's `[hidden] { display: none }`, so
+   the class-level display:flex above wouldn't otherwise actually hide it —
+   same reasoning as #lesson-group[hidden]. */
+#settings-group[hidden] { display: none; }
+
+#settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.settings-subsection h3 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+#reset-settings-btn {
+  width: 100%;
+  height: 32px;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: var(--input-bg);
+  color: #111;
+  padding: 0 9px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#reset-settings-btn:hover { background: #fff; border-color: var(--brand-green); }
+
+/* Same shape as Reset Settings above it, but red-shaded to read as
+   destructive. Always-white background (never the input-bg tint the other
+   sidebar buttons get) with the danger colour carried entirely by the
+   text — plus that same colour as a hover border, reserved transparent
+   by default (see the button {} rule's own comment on why: swapping only
+   the colour, never the width, is what keeps this from nudging anything
+   else in the sidebar on hover). */
+#delete-course-btn {
+  width: 100%;
+  height: 32px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid transparent;
+  color: #BA0016;
+  padding: 0 9px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+#delete-course-btn:hover { border-color: #BA0016; }
+
+/* Small round icon buttons living inside a section heading (e.g. Course's
+   +/✎) — same affordance as .lesson-remove, but always visible rather than
+   hover-revealed, since they're the only way to add a course or rename it. */
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: #fff;
+  color: #444;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.header-btn:hover { color: #333; border: 1px solid var(--brand-green); }
+
+/* Same treatment as #scratchpad-toggle.is-active — indicates a toggle
+   button (#course-settings-toggle, #print-panel-toggle) is in its "on"
+   state. Same green-border language as :hover above rather than a filled
+   background — "on" is just a persistent hover, visually. */
+.header-btn.is-active {
+  background: #fff;
+  border: 1px solid var(--brand-green);
+  color: #333;
+}
+
+.header-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The id selector below outranks the UA's `[hidden] { display: none }` —
+   #lesson-group is a .param-group, so its own display:flex would otherwise
+   win over the UA's [hidden] rule. */
+#lesson-group[hidden] { display: none; }
+
+.param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Controls are styled by where they live (the sidebar), not by their wrapper,
+   so they keep their look wherever they get moved to. */
+#sidebar label {
+  display: block;
+  color: var(--label-color);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+#sidebar input[type="text"],
+#sidebar input[type="number"],
+#sidebar input[type="time"],
+#sidebar select {
+  height: 32px;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: var(--value-color);
+  padding: 7px 7px;
+  font-family: inherit;
+  font-size: 11px;
+  width: 100%;
+  outline: none;
+  appearance: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+}
+
+#sidebar input[type="text"]:focus,
+#sidebar input[type="number"]:focus,
+#sidebar input[type="time"]:focus,
+#sidebar select:focus { border-color: #555; }
+
+/* appearance: none above also strips the native dropdown arrow — drawn back
+   in here so a select still reads as a select without a label saying so. */
+#sidebar select {
+  height: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+  cursor: pointer;
+}
+
+#sidebar input[type="color"] {
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+  padding: 2px;
+  height: 32px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.param-row.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-row.inline label {
+  color: var(--value-color);
+  cursor: pointer;
+}
+
+#sidebar input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--brand-green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Custom thumb/track, replacing the OS-default accent-color look (still
+   the old washed-out green, out of step with the #ddd-bordered inputs and
+   brand-green buttons everywhere else) — shared by every range input in
+   the app: the sidebar's Card Grid sliders here, plus .cover-fill-alpha's
+   transparency slider below. Flat grey track in both Chrome and Firefox
+   (::-moz-range-progress reset to match ::-webkit-slider-runnable-track/
+   ::-moz-range-track) rather than a filled/progress portion, since Chrome
+   has no equivalent without JS — a flat track keeps both engines looking
+   identical instead of one showing a fill the other can't. */
+input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+}
+input[type="range"]::-moz-range-progress {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--brand-green);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-green);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+input[type="range"]:focus { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb,
+input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(0, 187, 39, 0.25);
+}
+
+#sidebar input[type="range"] {
+  width: 100%;
+  cursor: pointer;
+}
+
+/* ── Lesson list ── */
+#lesson-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lesson-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 3px;
+  /* Transparent by default rather than added only when .is-active, so
+     picking up the real #666 border costs no layout shift (border still
+     takes its 1px either way). */
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.lesson-row:hover { background: var(--input-bg); }
+/* Same card-shaped-mark language as #lesson-title-mark/#present-mark and
+   the Pockit logo itself (see pockit-logo.png) — a solid punch-colour
+   swatch plus a frame, rather than a flat tinted background, marks the
+   selected lesson. See .lesson-drag-handle below for the swatch itself;
+   this is just the frame. */
+.lesson-row.is-active { border-color: #eee; background: #fff; }
+.lesson-row.dragging { opacity: 0.35; }
+
+/* Plain grip dots normally; the selected row's own version doubles as
+   that card-shaped mark — see .lesson-row.is-active below. Sized off the
+   configured card's own aspect ratio (--card-ratio, set on #sidebar in
+   readParams()/applyCourseTokens() — see their own comments on why
+   #sidebar needs its own copy of that token) so it stays a true card
+   shape rather than a fixed rectangle if that ratio changes.
+   .lesson-mark is the same box with none of the drag affordance — the
+   read-only viewer's lesson rows (see renderLessonList() in view.js) have
+   no reordering, so no grip glyph and no grab cursor, but still need the
+   same-height swatch so its row doesn't render more compact than the
+   editor's own (a real bug: without this box the row's height came from
+   the title/count text alone, ~10px shorter). */
+.lesson-drag-handle,
+.lesson-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  aspect-ratio: var(--card-ratio, 80 / 160);
+  flex-shrink: 0;
+  border-radius: 2px;
+  color: #bbb;
+  font-size: 9px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lesson-drag-handle { cursor: grab; }
+
+.lesson-row.is-active .lesson-drag-handle,
+.lesson-row.is-active .lesson-mark {
+  background: var(--punch-color, #00BB27);
+  color: #fff;
+}
+
+.lesson-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--value-color);
+}
+
+.lesson-row-count {
+  font-size: 9px;
+  color: #999;
+}
+
+/* Remove control, revealed on row hover — same affordance as .card-remove,
+   just smaller: unlike a header icon button, this sits inside a list row
+   where .lesson-row's own height comes from its tallest child (align-items:
+   center) — the .header-btn-style 30x30 this used to share forced every
+   row to that height even while invisible, which is the entire reason the
+   editor's own lesson list read as far less compact than the read-only
+   viewer's identical .lesson-row markup (which has no remove button at
+   all — see view/index.html). Shrinking just this one class's box is
+   enough to let the row collapse back to its text's own line height. */
+.lesson-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  background: #fff;
+  color: #444;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.lesson-row:hover .lesson-remove,
+.lesson-remove:hover { opacity: 1; }
+.lesson-remove:hover { color: #BA0016; border-color: #BA0016; }
+
+/* Insertion marker for drag-reorder — a horizontal line above/below the row,
+   the same device as .card-slot's vertical drop-before/drop-after bar, just
+   turned to match this list's vertical layout. */
+.lesson-row.drop-before::before,
+.lesson-row.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: #8a8a8a;
+  border-radius: 1px;
+}
+
+.lesson-row.drop-before::before { top: -2px; }
+.lesson-row.drop-after::after { bottom: -2px; }
+
+#add-lesson-btn,
+#add-timetable-btn {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg);
+  border: 1px solid transparent;
+  color: #111;
+  padding: 0 7px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#add-lesson-btn:hover,
+#add-timetable-btn:hover { background: #fff; border-color: var(--brand-green); }
+
+/* One row per timetabled class. A committed class is a single compact
+   line; the in-progress draft (see buildTimetableDraftRow()) is the fuller
+   day/start/length/room input form, stacked rather than a single wide row
+   since the sidebar isn't nearly wide enough to fit all four side by side. */
+#timetable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timetable-row {
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+}
+
+.timetable-row-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 4px 4px 10px;
+}
+
+.timetable-row-label {
+  font-size: 11px;
+  color: var(--value-color);
+}
+
+/* .timetable-remove has no rule of its own beyond .header-btn (see that
+   class's own comment) — this only overrides the one thing that should
+   differ for a delete action: a red hover border instead of green. Same
+   specificity as .header-btn:hover (one class + :hover each), so this has
+   to come after it in the file to actually win. */
+.timetable-remove:hover { border-color: #BA0016; color: #BA0016; }
+
+.timetable-row-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.timetable-row-fields {
+  display: flex;
+  gap: 6px;
+}
+
+.timetable-row-fields input[type="time"] { flex: 1; }
+
+.timetable-length-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+#sidebar .timetable-length-field input { width: 44px; flex: none; }
+
+.timetable-length-field span {
+  font-size: 10px;
+  color: var(--label-color);
+}
+
+.timetable-draft-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── Workspace ── */
+#workspace {
+  flex: 1;
+  overflow-x: scroll;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  padding: 48px;
+}
+
+/* Left-aligned rather than centered horizontally (no more margin: auto) —
+   a lesson's card count changes its width, and a centered block would shift
+   its left edge every time you switched lessons. Pinned to the workspace's
+   own left edge instead, it stays put. Vertical centring is unaffected,
+   handled by #workspace's own align-items above. */
+#workspace-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+#lesson-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Lesson Planner toggle. Its width (30px, same as .header-btn) plus this
+   row's own 8px gap is exactly the permanent left margin #card-row gives
+   .card-strip below — so the mark stays lined up above the first card
+   whether or not the planner is open. */
+#scratchpad-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: #fff;
+  color: #444;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#scratchpad-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#scratchpad-toggle:hover { color: #333; border: 1px solid var(--brand-green); }
+
+#scratchpad-toggle.is-active {
+  background: #fff;
+  border: 1px solid var(--brand-green);
+  color: #333;
+}
+
+/* A card-shaped swatch — its aspect ratio tracks the actual configured card
+   dimensions (--card-ratio, set on #workspace-inner from params.cardWidth/
+   cardHeight) rather than being fixed at 80:160, so it stays a true card
+   shape if those change. Color likewise tracks the header punch color. Its
+   own fixed height, independent of the title's font-size (they used to
+   share one variable, but the title now runs smaller while this stays put). */
+#lesson-title-mark {
+  height: 22px;
+  aspect-ratio: var(--card-ratio, 80 / 160);
+  background: var(--punch-color, #00BB27);
+  flex-shrink: 0;
+}
+
+#workspaceLessonTitle {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 8px;
+  /* Offsets the input's own left padding, so the text sits a consistent
+     distance from the mark rather than the input's invisible box padding
+     opening up a second, larger gap. */
+  margin-left: -10px;
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  color: var(--heading-color);
+  outline: none;
+  /* Wide enough for a real title, but never wider than the workspace. */
+  width: min(90vw, 480px);
+}
+
+#workspaceLessonTitle:hover { border-color: var(--input-border); }
+#workspaceLessonTitle:focus { border-color: #555; background: var(--input-bg); }
+
+/* Holds the Lesson Planner and the card strip side by side. The permanent
+   8px gap here matches #lesson-title-row's own gap, so with the planner
+   collapsed to the toggle button's 30px width, .card-strip's first card
+   still lines up directly under the title's mark, same as before this
+   existed — see #scratchpad-toggle above. */
+#card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  /* Positioning context for #teacher-overview-toggle below. */
+  position: relative;
+}
+
+/* Both toggled off by openCoverView() — an id beats the UA's
+   `[hidden] { display: none }`, same reasoning as #lesson-group[hidden]
+   elsewhere, so each needs its own explicit override to actually hide. */
+#lesson-title-row[hidden],
+#card-row[hidden],
+#teacher-overview-toggle[hidden] { display: none; }
+
+/* Same button/icon treatment as #scratchpad-toggle above, but pinned to
+   #card-row (position: relative, above) rather than flowed as another row
+   underneath everything — that put it well below the cards. Its own
+   `bottom` is set in JS (positionTeacherOverviewToggle(), run after every
+   render()) to center it on a card-label caption's own middle —
+   #card-row's own bottom edge is no help here, since #scratchpad-panel
+   (#card-row's other child) has its own fixed height, taller than
+   #card-strip. left: 0 lines up with #scratchpad-toggle's own left edge
+   above it. */
+#teacher-overview-toggle {
+  position: absolute;
+  left: 0;
+  bottom: 0; /* JS-set floor before the first render() runs */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #fff;
+  color: #444;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#teacher-overview-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#teacher-overview-toggle:hover { color: #333; border: 1px solid var(--brand-green); }
+
+#teacher-overview-toggle.is-active {
+  background: #fff;
+  border: 1px solid var(--brand-green);
+  color: #333;
+}
+
+#card-strip {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+/* ── Course cover ──────────────────────────────────────────────
+   Toggled from #course-cover-btn — see openCoverView()/closeCoverView().
+   An id beats the UA's `[hidden] { display: none }`, same reasoning as
+   #lesson-group[hidden] above. */
+#cover-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#cover-view[hidden] { display: none; }
+
+#cover-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#cover-title-row h2 {
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--heading-color);
+}
+
+#cover-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Not #sidebar-scoped like the rest of the app's form controls — these
+   live in the workspace, next to what they're actually affecting, for
+   immediate visual feedback rather than a trip to Course Settings. Covers
+   both the Design row's own "Design" label and the Spine Width label/input
+   sharing that row with it. */
+#cover-controls label {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--label-color);
+  white-space: nowrap;
+}
+
+/* The row's own flex `gap` alone reads as one continuous run once there
+   are more than two controls on it — this marks the start of each new
+   control group (Back Cover Text after Design, Spine after that) with a
+   visible divider and double the row's own gap on either side of it,
+   rather than just the same gap as everything else. */
+.cover-control-group {
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid var(--input-border);
+}
+
+#cover-controls input[type="number"] {
+  width: 70px;
+  height: 32px;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: var(--value-color);
+  padding: 7px 7px;
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+}
+
+#cover-controls input[type="number"]:focus { border-color: #555; }
+
+/* Same look as #sidebar's own checkboxes (e.g. #dots, #header) — not
+   #sidebar-scoped itself, same reasoning as the rest of #cover-controls. */
+#cover-controls input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--brand-green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Wide enough that "Whole Cover" never wraps onto two lines — .segmented's
+   own button padding is tuned for the shorter labels its other users (e.g.
+   #imageFit) have, so this needs its own floor rather than changing that
+   shared default. */
+#coverMode button { white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+
+/* #coverMode itself doesn't need sizing beyond .segmented's own — it's the
+   per-row toggles below (colour vs image, icon-only — see
+   COVER_FILL_ICONS) that need pinning to a minimum width, so a row's
+   colour swatch/image button doesn't shift sideways depending on which
+   one is currently showing. min- rather than a hard width so it can still
+   grow past a narrow per-side column if it ever needs to, rather than
+   getting crushed illegibly — moot most of the time now that these are
+   icons rather than "Colour"/"Image" text, but kept as a floor. */
+.cover-fill-type-toggle { min-width: 64px; flex-shrink: 0; }
+
+.cover-fill-type-toggle button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.cover-fill-type-toggle button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cover-fill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Any normal-priority author rule (.cover-fill-list's own display:flex
+   above included) outranks the UA's `[hidden] { display: none }` by origin
+   alone, regardless of specificity — same reasoning as #lesson-group[hidden]
+   elsewhere, so this needs its own explicit override to actually hide. */
+#cover-fill-whole[hidden],
+#cover-fill-perside[hidden] { display: none; }
+
+/* Label above its own controls rather than beside them, in both Whole
+   Cover and Per Side — so the controls' left edge lands in the same place
+   either way and nothing shifts sideways when switching #coverMode. */
+.cover-fill-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.cover-fill-label {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--label-color);
+}
+
+/* Toggle, colour swatch/image button and upload note — kept in their own
+   wrapper (see buildCoverFillRow()) so the per-side layout below can put
+   the row's label on its own line while these three stay inline with each
+   other, rather than every child of the row stacking individually. */
+.cover-fill-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Per-side rows sit in one line, spanning the same overall width as
+   #cover-spread below (renderCoverView() sets that width explicitly) —
+   but split into three EQUAL columns rather than matching each panel's
+   own width. A panel-matched spine column is normally far too narrow for
+   real controls (7mm, typically), so the columns are deliberately untied
+   from the covers/spine's own proportions — same total span, even thirds
+   regardless of how the panels beneath happen to divide it. Each row's own
+   label-above-controls stacking comes from the shared .cover-fill-row rule
+   above; this just arranges the three rows themselves side by side. */
+#cover-fill-perside {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+}
+
+#cover-fill-perside .cover-fill-row {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Whole-cover mode's Cover and Spine rows side by side too, same
+   label-above-controls stacking as the per-side rows above — but sized to
+   their own content rather than forced into equal columns, since there's
+   no panel underneath either one needs to line up with (unlike per-side,
+   the image here is one continuous span, not per-column). */
+#cover-fill-whole {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.cover-fill-color {
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cover-fill-image-btn {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg);
+  color: var(--value-color);
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cover-fill-image-btn:hover { background: #fff; }
+.cover-fill-image-btn[hidden] { display: none; }
+
+/* Transparency slider next to every colour swatch — see buildCoverAlphaInput()
+   and hexToRgba() in course-builder.js. Kept narrow: it's a secondary
+   control, not worth the width a color swatch or "Choose Image…" gets. */
+.cover-fill-alpha {
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.cover-fill-note {
+  font-size: 9px;
+  color: #a06040;
+}
+
+/* Flat, unfolded layout — back cover, spine, front cover, left to right —
+   sized in renderCoverView() from params.cardWidth/cardHeight/spineWidth.
+   No gap between panels: physically one continuous piece. */
+#cover-spread {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--input-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cover-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+#cover-back {
+  border-right: 1px dashed var(--sidebar-border);
+  /* Positioning context for #cover-back-text below. */
+  position: relative;
+}
+#cover-front {
+  border-left: 1px dashed var(--sidebar-border);
+  /* Positioning context for #cover-front-mark/#cover-front-info below. */
+  position: relative;
+}
+#cover-spine { background: #fafafa; }
+
+/* Brand mark, top-right of the front cover — a rectangle in the same
+   width:height proportion as this course's own cards (echoing the Pockit
+   logo's own green card-shaped bar), over whatever fill the front panel
+   already has. Sized/positioned in renderCoverView() (depends on the
+   cover's current mm dimensions); this rule is just its fixed look.
+   pointer-events: none so it doesn't get in the way of dragging the
+   front's own image underneath it. */
+#cover-front-mark {
+  position: absolute;
+  background: #00bb27;
+  pointer-events: none;
+}
+
+/* Blank space at the bottom of the front cover for the recipient's own
+   handwritten name/contact details — full width minus a grid unit of
+   padding on each side (left/right set, no explicit width, so it just
+   spans whatever's between them), 3 grid units tall. Sized/positioned in
+   renderCoverView(); pointer-events: none for the same reason as the mark
+   above (stays out of the front panel's own image-drag interaction). */
+#cover-front-contact {
+  position: absolute;
+  background: #fff;
+  box-sizing: border-box;
+  /* Tighter than --cover-inner-pad (used by #cover-front-info) — this box
+     is just a "Name / Contact" prompt in the corner, not a text block that
+     needs room to breathe. Top less than left/right/bottom: a line box's
+     own leading sits above the glyphs, so equal padding-top reads as
+     visually bigger than the same padding-left — this compensates. */
+  padding: calc(var(--cover-inner-pad) / 4) calc(var(--cover-inner-pad) / 2) calc(var(--cover-inner-pad) / 2);
+  pointer-events: none;
+}
+
+#cover-front-contact span {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 2mm;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: #888;
+}
+
+/* Course code/title panel, to the left of the mark — same top/height, a
+   padding-width gap from the mark instead of one of its own. Own inner
+   padding (distinct from that outer gap) so the text doesn't sit flush
+   against its edges; column layout with the code pinned to the top and
+   the title filling — and, once long enough, scrolling off the bottom of
+   — what's left, rather than the two ever overlapping. */
+#cover-front-info {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5mm;
+  padding: var(--cover-inner-pad);
+  box-sizing: border-box;
+  background: #fff;
+  pointer-events: none;
+}
+
+#cover-front-code {
+  flex-shrink: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 2.4mm;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: #111;
+}
+
+#cover-front-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 3.2mm;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #333;
+}
+
+/* Who prepared this, from the Profile panel — pinned to the bottom of the
+   box via margin-top: auto (same trick as #present-panel-group's own
+   pinned-to-bottom groups, just vertical-within-a-box here rather than
+   sidebar-wide): #cover-front-title above still owns flex: 1 and would
+   otherwise grow to fill the same space, but an auto margin claims free
+   space ahead of flex-grow, so the title settles to its own content size
+   and this sits under it at the box's own bottom edge instead. */
+#cover-front-person {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3mm;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+#cover-front-person[hidden] { display: none; }
+
+#cover-front-person-name {
+  font-size: 2.2mm;
+  font-weight: 600;
+  color: #333;
+}
+
+#cover-front-person-role {
+  font-size: 1.9mm;
+  font-weight: 400;
+  color: #666;
+}
+
+/* Set by applyCoverFill()/setupCoverDrag() in course-builder.js — only
+   while a panel's image actually overflows its box (there's otherwise
+   nothing a drag could reveal) and while a drag is in progress. */
+.cover-panel.is-draggable { cursor: grab; }
+.cover-panel.is-dragging { cursor: grabbing; }
+
+/* Back cover's text box — same click-to-edit interaction as a card's own
+   Text block (see .card-block-markdown/.card-block-preview/.card-block-editor),
+   rebuilt here rather than reused verbatim since those assume a card's own
+   absolute-fill/--card-pad layout. Own pointer-events (unlike the
+   front's pointer-events:none mark/info) since this one needs clicks;
+   initCoverBackText() stops it from also reaching setupCoverDrag()'s
+   listener on the panel underneath. */
+#cover-back-text {
+  position: absolute;
+  background: #fff;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cover-text-preview,
+.cover-text-editor {
+  position: absolute;
+  inset: 0;
+  padding: var(--cover-inner-pad);
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 2.6mm;
+  line-height: 1.4;
+  color: #1a1a1a;
+}
+
+/* Must come after the rule above, which would otherwise out-rank the UA's
+   `[hidden] { display: none }` and leave both halves of the swap on screen
+   — same reasoning as .card-block-markdown > [hidden]. */
+#cover-back-text > [hidden] { display: none; }
+
+.cover-text-preview {
+  cursor: text;
+  overflow: hidden;
+}
+.cover-text-preview.is-empty { color: #c8c8c8; }
+.cover-text-preview p { margin: 0 0 0.6em; }
+.cover-text-preview p:last-child { margin-bottom: 0; }
+.cover-text-preview :is(ul, ol) { margin: 0 0 0.6em; padding-left: 4mm; }
+.cover-text-preview li { margin-bottom: 0; }
+.cover-text-preview strong { font-weight: 700; }
+.cover-text-preview em { font-style: italic; }
+
+.cover-text-editor {
+  resize: none;
+  background: #fffdf3;
+}
+
+/* Toggles params.coverBackTextAlign — hover-revealed the same way a card's
+   own Image block reveals its .card-block-settings gear, rather than
+   sitting permanently on top of the preview text. renderCoverView() sets
+   its icon/title to match the current side. */
+.cover-text-align-btn {
+  position: absolute;
+  top: 1mm;
+  right: 1mm;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  color: #444;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.cover-text-align-btn svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#cover-back-text:hover .cover-text-align-btn { opacity: 1; }
+.cover-text-align-btn:hover { color: #333; }
+
+/* Same grip-strip pattern as a card block's own .card-block-resize — top
+   or bottom (set in renderCoverView(), opposite whichever edge
+   params.coverBackTextAlign anchors) rather than fixed, since the edge
+   that's free to move is whichever one isn't anchored. */
+.cover-text-resize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  z-index: 3;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.cover-text-resize::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: #8a8a8a;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cover-text-resize:hover::after { opacity: 1; }
+
+/* Placeholder only, identifying which panel is which until there's real
+   cover content to design — narrow enough at the default 7mm that the
+   spine's own label has to run vertically rather than overflow it. */
+.cover-panel-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #bbb;
+}
+
+#cover-spine .cover-panel-label { writing-mode: vertical-rl; }
+
+/* Course code/title running down the spine, same idea as .cover-panel-label
+   above (vertical-rl) but real content rather than a placeholder — hidden
+   by renderCoverView() once this has something to show, since the two
+   would otherwise sit centered on top of each other. No wrap: with the
+   spine's own height this comfortably fits on one run without needing to
+   break into a second (far too narrow to hold) column, so code and title
+   just read as one continuous line, "·"-joined the same way the card
+   footer already joins them. Aligned to the top of the panel (overriding
+   .cover-panel's own vertical centering), rather than centered like the
+   placeholder label it replaces — flush with where the text *inside*
+   #cover-front-info actually starts (its own outer padding plus its inner
+   padding); margin-top is set by renderCoverView() rather than fixed here
+   since both of those are the course's own grid unit, not a constant.
+   `color` is set there too — see pickTextColor() — so it can flip between
+   black and white against whatever's actually showing through underneath;
+   the code/title spans below just inherit it. */
+#cover-spine-info {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  pointer-events: none;
+  align-self: flex-start;
+  color: #000;
+}
+
+#cover-spine-code {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 2.4mm;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+#cover-spine-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 3.2mm;
+  font-weight: 700;
+}
+
+/* Built fresh right before printing (see buildPrintPages()) and otherwise
+   empty — never shown on screen. print.css turns it back on for print. */
+#print-root { display: none; }
+
+/* ── Lesson Planner (Scratchpad) ──────────────────────────────
+   Closed, it's just a 30px-wide sliver — the same width as the toggle
+   button above it, so the layout doesn't jump. Open, it grows to
+   --scratchpad-width (set in JS off the guides row's own measured size) and
+   slides the card strip along with it. overflow:hidden is what makes that a
+   reveal rather than a reflow — the guides row inside never actually
+   shrinks (see .scratchpad-guide/.scratchpad-blank's flex-shrink:0), it's
+   just clipped until there's room to show it. */
+#scratchpad-panel {
+  position: relative;
+  flex-shrink: 0;
+  width: 30px;
+  overflow: hidden;
+  transition: width 0.25s ease;
+  /* Closed, the guides/notes layer is still there underneath (just clipped
+     to this 30px sliver, left edge showing) — without this, that sliver is
+     still live, so a click meant to deselect a card next to it instead
+     drops a stray note (see #scratchpad-notes's pointerdown handler). */
+  pointer-events: none;
+}
+
+#scratchpad-panel.is-open {
+  width: var(--scratchpad-width, 30px);
+  pointer-events: auto;
+}
+
+#scratchpad-guides {
+  display: flex;
+  align-items: flex-end;
+  gap: 6mm;
+  padding: 6mm;
+}
+
+/* One card-shaped "page" per timetabled class, with its day/time/room
+   printed just above — light guides for planning against, not part of the
+   saved note data (see buildScratchpadGuide()). */
+.scratchpad-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2mm;
+  flex-shrink: 0;
+}
+
+.scratchpad-guide-label {
+  font-size: 8px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.scratchpad-guide-daytime {
+  font-weight: 700;
+  color: #777;
+}
+
+/* Doubles the row's base 6mm gap, but only between two guides — the gap on
+   either side of a blank stays at the base 6mm (see .scratchpad-blank +
+   .scratchpad-guide below), so widening this doesn't also push the guides
+   away from their flanking free space. */
+.scratchpad-guide + .scratchpad-guide { margin-left: 6mm; }
+
+/* No left/right border and no fill — deliberately less card-like than the
+   guide's own dimensions suggest, so it still reads as a light time-block
+   marking rather than something asking to be filled in like a real card. */
+.scratchpad-guide-card {
+  position: relative;
+  flex-shrink: 0;
+  border-top: 1px dashed #ddd;
+  border-bottom: 1px dashed #ddd;
+}
+
+.scratchpad-guide-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #e5e5e5;
+}
+
+/* Every 4th 15-minute line lands on the hour — thicker, so a multi-hour
+   session's hour boundaries still stand out among its 15-minute ones. */
+.scratchpad-guide-line.is-hour { border-top: 2px solid #bbb; }
+
+.scratchpad-guide-line-label {
+  position: absolute;
+  left: 2px;
+  transform: translateY(-100%);
+  font-size: 6px;
+  color: #bbb;
+}
+
+/* One card-width of free planning room on each side of the timetabled
+   guides (see renderScratchpad()) — same card height so it reads as part of
+   the same strip, but blank: nothing about it is saved, it's just working
+   space. */
+.scratchpad-blank {
+  flex-shrink: 0;
+}
+
+/* Covers #scratchpad-guides/#scratchpad-notes when the active course has
+   no timetabled classes yet — see renderScratchpad(). pointer-events: none
+   on the overlay itself (re-enabled just on the button) lets a click
+   anywhere else in this same area still reach #scratchpad-notes beneath
+   for note-dragging, exactly as if this overlay weren't there at all. */
+#scratchpad-empty-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+#scratchpad-empty-overlay[hidden] { display: none; }
+
+#scratchpad-empty-overlay button {
+  pointer-events: auto;
+  /* Without these two, a flex child shrinks/wraps to fit the panel's
+     collapsed 30px width instead of overflowing it — same trick
+     .scratchpad-blank/.scratchpad-guide rely on (flex-shrink: 0) so
+     #scratchpad-panel's own overflow: hidden clips this invisible when
+     collapsed too, rather than leaving a wrapped sliver of readable text
+     showing. */
+  flex-shrink: 0;
+  white-space: nowrap;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  background: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+#scratchpad-empty-overlay button:hover { border: 1px solid var(--brand-green); }
+
+/* Sits on top of the guides at the same size (see renderScratchpad()) and
+   owns note creation — dragging out a rectangle on any empty spot of it
+   starts a new note (see wireScratchpadCanvas()); individual notes stop
+   that behaviour reaching this layer by handling their own pointerdown. */
+#scratchpad-notes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
+}
+
+.scratchpad-note-ghost {
+  position: absolute;
+  border: 1px dashed #999;
+  background: rgba(0, 0, 0, 0.03);
+  pointer-events: none;
+}
+
+/* Loosely a sticky note — same warm tint as Key Idea's card styling,
+   deliberately with no recorded relationship to the guides underneath it,
+   same as writing on a printed page. */
+.scratchpad-note {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: #f6efd8;
+  border: 1px solid #cbb26b;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: default;
+}
+
+.scratchpad-note-text {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 5px 6px;
+  font-family: 'Patrick Hand', 'Segoe Print', 'Bradley Hand', cursive;
+  font-size: 15px;
+  line-height: 1.25;
+  color: #4a3f22;
+  width: 100%;
+}
+
+/* Grip, remove and resize affordances match the card block's own
+   (.card-block-grip/.card-block-remove/.card-block-resize) — same
+   hover-revealed, corner-anchored language, just free-floating here rather
+   than pinned to a card edge. */
+.scratchpad-note-grip {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 9px;
+  height: 9px;
+  z-index: 2;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background-image: radial-gradient(circle, #a08a4a 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+.scratchpad-note:hover .scratchpad-note-grip { opacity: 1; }
+.scratchpad-note-grip:active { cursor: grabbing; }
+
+.scratchpad-note-remove {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: #a08a4a;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.scratchpad-note:hover .scratchpad-note-remove { opacity: 1; }
+.scratchpad-note-remove:hover { color: #a06040; }
+
+.scratchpad-note-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  z-index: 2;
+  cursor: se-resize;
+  touch-action: none;
+}
+
+.scratchpad-note-resize::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid #cbb26b;
+  border-bottom: 1px solid #cbb26b;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.scratchpad-note:hover .scratchpad-note-resize::after { opacity: 1; }
+
+.card-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.card-slot.dragging { opacity: 0.35; }
+
+/* Only handles advertise the drag. The header band has to opt back into
+   pointer events; the compound selector outranks .card-header's own
+   `pointer-events: none` regardless of source order. */
+.card-drag-handle { cursor: grab; }
+.card-header.card-drag-handle { pointer-events: auto; }
+
+.card-slot.dragging .card-drag-handle { cursor: grabbing; }
+
+/* Insertion indicator, drawn in the middle of the 24px strip gap. Anchored to
+   the frame so it spans exactly the card, not the label beneath it. */
+.card-frame {
+  position: relative;
+}
+
+.card-slot.drop-before .card-frame::before,
+.card-slot.drop-after .card-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #8a8a8a;
+  border-radius: 1px;
+}
+
+.card-slot.drop-before .card-frame::before { left: -13px; }
+.card-slot.drop-after .card-frame::after { right: -13px; }
+
+/* The add-slot has no .card-frame, so its marker hangs off the slot itself. */
+.card-slot.is-add-slot.drop-before::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 19px;
+  left: -13px;
+  width: 2px;
+  background: #8a8a8a;
+  border-radius: 1px;
+}
+
+.card-slot.is-add-slot { position: relative; }
+
+.card-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 2.4mm;
+  letter-spacing: 0.02em;
+  color: #888888;
+  user-select: none;
+}
+
+.card-label-grip {
+  flex-shrink: 0;
+  cursor: grab;
+  opacity: 0.5;
+  line-height: 1;
+}
+.card-label-grip:active { cursor: grabbing; }
+.card-label:hover .card-label-grip { opacity: 1; }
+
+/* The editable title, styled to sit flush with the rest of the caption
+   until it's focused — see buildCardLabel(). */
+.card-label-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  outline: none;
+  user-select: text;
+  text-overflow: ellipsis;
+}
+.card-label-input::placeholder { color: inherit; opacity: 1; }
+.card-label-input:focus { color: #555; }
+
+/* Per-card Teacher Overview box (see buildTeacherOverviewBox()) — a third
+   .card-slot child below .card-label, shown only while teacherOverviewOpen
+   is on. Its width is set inline (matching .card's own params.cardWidth)
+   rather than here — .card-slot is a plain align-items:center column with
+   no width of its own, so a CSS width:100% would be relative to whatever
+   that column happens to shrink-to-fit around, letting a long unbroken
+   line of real text grow the whole column (and this box with it) past the
+   card's own width instead of reliably matching it. Height is likewise
+   fixed rather than content-driven — a 16:9 slide shape (the point of
+   these: an in-class "present" slide, see the toggle above), not a text
+   box that grows/shrinks with what's typed into it. */
+.teacher-overview-box {
+  box-sizing: border-box;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: #fffdf3;
+}
+
+/* Square-edged and white specifically while showing the rendered preview —
+   closer to how the actual "slide" would look — rather than always; the
+   rounded corners and cream tint stay while actively editing, same shape
+   as every other click-to-edit box in the app. */
+.teacher-overview-box:has(.teacher-overview-preview:not([hidden])) {
+  border-radius: 0;
+  background: #fff;
+}
+
+.teacher-overview-preview,
+.teacher-overview-editor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #1a1a1a;
+  overflow-y: auto;
+}
+
+.teacher-overview-preview { cursor: text; }
+.teacher-overview-preview.is-empty { color: #c8c8c8; }
+.teacher-overview-preview p { margin: 0 0 0.5em; }
+.teacher-overview-preview p:last-child { margin-bottom: 0; }
+.teacher-overview-preview :is(ul, ol) { margin: 0 0 0.5em; padding-left: 4mm; }
+.teacher-overview-preview li { margin-bottom: 0; }
+.teacher-overview-preview strong { font-weight: 700; }
+.teacher-overview-preview em { font-style: italic; }
+
+/* Must come after the rule above, which would otherwise out-rank the UA's
+   `[hidden] { display: none }` — same reasoning as .card-block-markdown
+   > [hidden]. */
+.teacher-overview-box > [hidden] { display: none; }
+
+/* ── A card ── */
+.card {
+  position: relative;
+  background: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Trim-line indicator. A plain sibling div rather than an outline on .card
+   itself, so DOM order — appended after the body/header/footer — is what
+   keeps it painting on top of them, not stacking-context guesswork. */
+.card-outline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Spans the card body only — top/bottom are set inline from the header and
+   footer heights, so the grid never runs under them. */
+.card-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+/* ── Content blocks ── */
+.card-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Opaque, so the dot grid stops where content starts. No separators — the
+   resize handle's hover line is the only edge that needs showing. */
+.card-block {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+/* ── Block content ── */
+/* Card-side typography, so it reads as print output rather than as form
+   controls. Sizes are in pt because that is how the printed card is specced. */
+/* Headings sit on the baseline at the foot of their block, so a heading reads
+   as belonging to what follows it. The wrapper carries the block-filling box
+   and the padding; the input is only as tall as its own line. */
+.card-block-line {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--card-pad) 1mm;
+  cursor: text;
+}
+
+/* No vertical padding — the line box's own half-leading provides the optical
+   inset, and any padding here would push the text off the grid. */
+.card-block-markdown {
+  position: absolute;
+  inset: 0;
+  padding: 0 var(--card-pad);
+}
+
+.card-block-heading {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Barlow', sans-serif;
+  /* A step up from the 2.4mm header text, not a step up from body copy. */
+  font-size: 3.2mm;
+  font-weight: 700;
+  /* One grid square, so the heading's line sits on the same rhythm as body
+     copy and the block-filling wrapper can bottom-align it. */
+  line-height: var(--card-line);
+  text-transform: none;
+  letter-spacing: 0;
+  color: #000;
+  width: 100%;
+  padding: 0;
+}
+
+.card-block-heading::placeholder {
+  font-weight: 400;
+  color: #c8c8c8;
+}
+
+.card-block-markdown > * {
+  width: 100%;
+  height: 100%;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 8pt;
+  line-height: var(--card-line);
+  color: #1a1a1a;
+  overflow: hidden;
+}
+
+.card-block-preview { cursor: text; }
+.card-block-preview.is-empty { color: #c8c8c8; }
+
+/* A full blank line between paragraphs reads as too loose for card-sized
+   copy — half a line marks the break without it. */
+.card-block-preview p { margin: 0 0 calc(var(--card-line) / 2); }
+.card-block-preview p:last-child { margin-bottom: 0; }
+
+/* Before a list, even half a line looks oversized next to the list's own
+   tight item-to-item spacing — trim it by half again. Covers both bullet
+   and numbered lists. */
+.card-block-preview p:has(+ :is(ul, ol)) { margin-bottom: calc(var(--card-line) / 4); }
+
+.card-block-preview :is(ul, ol) {
+  margin: 0 0 var(--card-line);
+  padding-left: 3.2mm;
+  /* Outside markers hang in the UA's own reserved gutter, which is narrower
+     than our padding and lets the disc (or number) creep past the card's
+     left edge to get clipped by its overflow:hidden. Inside keeps the
+     marker as part of the li's own content box, which the padding does
+     protect. */
+  list-style-position: inside;
+}
+
+.card-block-preview :is(ul, ol):last-child { margin-bottom: 0; }
+.card-block-preview li { margin-bottom: 0; }
+/* Tied to the header punch color, like the other green accents. */
+.card-block-preview li::marker { color: var(--punch-color); }
+.card-block-preview strong { font-weight: 700; }
+.card-block-preview em { font-style: italic; }
+
+/* Matched to the preview so the swap doesn't shift the text. */
+.card-block-editor {
+  border: none;
+  outline: none;
+  background: #fffdf3;
+  resize: none;
+  display: block;
+  /* A textarea's own padding would offset its text from the preview's. */
+  padding: 0;
+}
+
+/* Must come after the rules above, which would otherwise out-rank the UA's
+   `[hidden] { display: none }` and leave both halves of the swap on screen. */
+.card-block-markdown > [hidden] { display: none; }
+
+/* Boxed prompt — inset from the card edge by the same margin the header and
+   footer sit on, so the curve lines up with the rest of the card. */
+.card-block-boxed {
+  position: absolute;
+  inset: var(--card-pad);
+  border: 0.25mm solid #c4c4c4;
+  border-radius: 2mm;
+  padding: 1.4mm;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Screen-only accent tying the outline back to the header's punch color —
+   printed cards are grayscale, so this carries no meaning there. Matrix
+   keeps the same inset box as these two (rather than going flush like Key
+   Idea/Task) — the border is what marks it out as a place for the
+   student to fill in. */
+.card-block-boxed.is-reflection,
+.card-block-boxed.is-list,
+.card-block-boxed.is-matrix {
+  border-color: var(--punch-color);
+}
+
+/* Blocks stack with no gap of their own, so two boxed insets back to back
+   would double up: this box's bottom inset plus the next box's top inset.
+   Dropping this one's bottom inset leaves just the one gap, matching the
+   inset on every other side. Reflection, List and Matrix share the same
+   default (uninset-by-.is-task) box, so any pairing among them needs
+   this — not just two of the same type. Key Idea is flush like .is-task,
+   so it doesn't have this problem and isn't part of the fix. */
+.card-block:has(+ .card-block > .card-block-boxed:is(.is-reflection, .is-list, .is-matrix))
+  > .card-block-boxed:is(.is-reflection, .is-list, .is-matrix) {
+  bottom: 0;
+}
+
+/* ── Image ── */
+/* No padding: a cover image should reach the card edges. The card's own
+   overflow clips it. */
+.card-block-image {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* object-fit is set inline from the block's own setting. */
+.card-block-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-position: center;
+}
+
+.card-block-image.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The empty placeholder still sits in from the edge — it's an affordance, not
+   content. */
+.card-block-image.is-empty::before {
+  content: '';
+  position: absolute;
+  inset: 1mm;
+  border: 0.2mm dashed #c8c8c8;
+  border-radius: 1mm;
+}
+
+.card-block-image-prompt {
+  position: relative;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 7pt;
+  color: #b8b8b8;
+  text-align: center;
+  padding: 0 3mm;
+}
+
+.card-block-image.is-dropping::before { border-color: #8a8a8a; }
+.card-block-image.is-dropping { background: rgba(0, 0, 0, 0.02); }
+
+/* Screen-only chrome, so fit and alt text have a way in without putting form
+   fields on a print preview. */
+.card-block-settings {
+  position: absolute;
+  right: var(--card-pad);
+  bottom: 1mm;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #fff;
+  color: #444;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.card-block-settings svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-block-image:hover .card-block-settings { opacity: 1; }
+.card-block-settings:hover { color: #333; }
+
+/* Held open while there's no alt text — the one state worth flagging. */
+.card-block-settings.is-missing-alt {
+  opacity: 1;
+  color: #8a6d2f;
+}
+
+/* Screen-only chrome: a warning that this will print soft. */
+.card-block-image-note {
+  position: absolute;
+  left: var(--card-pad);
+  bottom: 1mm;
+  font-family: 'Barlow', sans-serif;
+  font-size: 2mm;
+  letter-spacing: 0.04em;
+  padding: 0.4mm 1mm;
+  border-radius: 0.6mm;
+  pointer-events: none;
+}
+
+.card-block-image-note:empty { display: none; }
+.card-block-image-note.is-warn { background: #f6efd8; color: #8a6d2f; }
+.card-block-image-note.is-error { background: #f6e2da; color: #a06040; }
+
+/* ── Link (QR) ── */
+.card-block-link {
+  position: absolute;
+  inset: 0;
+  padding: var(--card-pad);
+  display: flex;
+  gap: 1.8mm;
+  align-items: stretch;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Square, sized off the block height so it stays square as the block resizes. */
+.card-block-qr {
+  height: 100%;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+.card-block-qr svg { display: block; width: 100%; height: 100%; }
+
+.card-block-qr.is-empty {
+  border: 0.2mm dashed #d0d0d0;
+  border-radius: 0.8mm;
+}
+
+.card-block-link-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: 'Barlow', system-ui, sans-serif;
+  color: #1a1a1a;
+}
+
+/* Keeps the title clear of the source mark in the corner. */
+.card-block-link-text { padding-right: 5mm; }
+
+/* .card-block-link also sits flush with the card edge, so this needs the
+   same border-width + icon-inset add-back as .is-task above, to land in
+   the same spot as Reflection's icon. */
+.card-block-link-icon {
+  position: absolute;
+  top: calc(var(--card-pad) + 1.65mm);
+  right: calc(var(--card-pad) + 1.65mm);
+  width: 3.6mm;
+  height: 3.6mm;
+  color: var(--card-icon);
+  pointer-events: none;
+}
+
+.card-block-link-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-block-link-title {
+  font-size: 8pt;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-bottom: 0.6mm;
+  overflow-wrap: anywhere;
+}
+
+.card-block-link-title.is-empty { font-weight: 400; color: #c0c0c0; }
+
+.card-block-link-description {
+  font-size: 7pt;
+  line-height: 1.3;
+  color: #555;
+  overflow-wrap: anywhere;
+}
+
+.card-block-link-shortlink {
+  margin-bottom: 0.6mm;
+  font-family: 'Barlow', sans-serif;
+  font-size: 6pt;
+  color: #888;
+  overflow-wrap: anywhere;
+}
+
+/* ── Link editor popover ── */
+#link-editor-backdrop,
+#image-editor-backdrop,
+#add-course-dialog-backdrop,
+#sign-in-dialog-backdrop,
+#profile-panel-backdrop,
+#share-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+#link-editor,
+#image-editor,
+#add-course-dialog,
+#sign-in-dialog,
+#profile-panel,
+#share-panel {
+  position: fixed;
+  z-index: 11;
+  width: 300px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* An id beats the UA's `[hidden] { display: none }`, so the display above has
+   to be switched off explicitly or the popover is permanently on screen. */
+#link-editor[hidden],
+#image-editor[hidden],
+#add-course-dialog[hidden],
+#sign-in-dialog[hidden],
+#profile-panel[hidden],
+#share-panel[hidden] { display: none; }
+
+#link-editor h2,
+#image-editor h2,
+#add-course-dialog h2,
+#sign-in-dialog h2,
+#share-panel h2 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+/* Real single-line controls only — a textarea forced to this would clip to
+   about one visible line, which defeats #linkDescription/#imageAlt's own
+   multi-line purpose (see the shared box-styling rule below, which both
+   still get — just not a fixed height). */
+#link-editor input,
+#add-course-dialog input,
+#sign-in-dialog input,
+#profile-panel input[type="text"],
+#profile-panel select,
+#share-panel input[type="email"],
+#share-panel input[type="text"] {
+  height: 32px;
+}
+
+#link-editor input,
+#link-editor textarea,
+#image-editor textarea,
+#add-course-dialog input,
+#sign-in-dialog input,
+#profile-panel input[type="text"],
+#profile-panel select,
+#share-panel input[type="email"],
+#share-panel input[type="text"] {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: var(--value-color);
+  padding: 7px 7px;
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  resize: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+}
+
+#link-editor input:focus,
+#link-editor textarea:focus,
+#image-editor textarea:focus,
+#add-course-dialog input:focus,
+#sign-in-dialog input:focus,
+#profile-panel input[type="text"]:focus,
+#profile-panel select:focus,
+#share-panel input[type="email"]:focus,
+#share-panel input[type="text"]:focus { border-color: #555; }
+
+#link-editor label,
+#image-editor label,
+#add-course-dialog label,
+#sign-in-dialog label,
+#profile-panel label,
+#share-panel label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--label-color);
+  margin-bottom: 4px;
+}
+
+/* appearance: none above also strips the native dropdown arrow — drawn
+   back in here so #profileTitle still reads as a select, same treatment
+   as #sidebar select. No explicit height: it matches the name inputs'
+   naturally, since both share the same padding/font-size/border-box. */
+#profile-panel select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  padding-right: 15px;
+  cursor: pointer;
+}
+
+/* Title/first/last on one line — title's own field is narrower (values
+   are always short: "Dr", "Prof", …), first/last share what's left. */
+#profile-name-row {
+  display: flex;
+  gap: 8px;
+}
+
+#profile-name-row .param-row {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Two ids beats #profile-name-row .param-row's (id + class) specificity
+   above — needed since .param-row's flex: 1 would otherwise win despite
+   this rule coming later in source order (equal specificity is required
+   for source order to be the tiebreaker; this wasn't equal). */
+#profile-name-row #profile-title-field {
+  flex: 0 0 46px;
+}
+
+#signInStatus,
+#shareInviteStatus,
+#share-cloud-gate,
+.share-empty {
+  font-size: 10px;
+  color: var(--label-color);
+  line-height: 1.4;
+  min-height: 1.4em;
+}
+
+/* Grows to fill the leftover space in #share-invite-footer, same as
+   #link-editor-note/#image-editor-note do in their own footers — that's
+   what packs Cancel+Invite together against the right edge instead of
+   justify-content: space-between spreading all three apart evenly. */
+#shareInviteStatus {
+  flex: 1;
+  min-width: 0;
+}
+
+/* #share-panel's own gap: 10px only spaces its direct children
+   (h2/#share-cloud-gate/#share-body) apart — without this, #share-body's
+   own children (the access list, both invite fields, the footer, Preview
+   as viewer) had no spacing between them at all and read as cramped. */
+#share-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Same list-of-rows shape as #timetable-list, kept as its own declaration
+   rather than a shared class — same "each feature area gets its own
+   class" convention as .lesson-remove/.card-remove/.timetable-remove. */
+#share-access-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-access-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  padding: 4px 4px 4px 10px;
+}
+
+/* Email plus " · Pending"/" · Accepted" plus an optional " · <note>" — same
+   " · "-joined convention as courseLabel()/the printed card footer label,
+   rather than a separate status pill needing its own color/shape. */
+.share-access-label {
+  font-size: 11px;
+  color: var(--value-color);
+  overflow-wrap: anywhere;
+}
+
+/* No dedicated rule beyond .header-btn's own box — always visible rather
+   than hover-revealed, same as .timetable-remove (this is an active
+   access list being managed, not a passive one glanced at). */
+.share-access-remove:hover { color: #a06040; border-color: #a06040; }
+
+#link-url-row {
+  display: flex;
+  gap: 6px;
+}
+
+#linkFetch {
+  flex-shrink: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Reserved transparent — #linkUrl next to this is flex: 1 (fills
+     whatever's left), so a border only appearing on hover would grow
+     this button and visibly narrow that input by the same amount. */
+  border: 1px solid transparent;
+  background: var(--brand-green);
+  color: #fff;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#linkFetch:hover:not(:disabled) { background: #fff; color: #111; border-color: var(--brand-green); }
+#linkFetch:disabled { opacity: 0.5; cursor: default; }
+
+#link-slug-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#link-slug-prefix {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #888;
+  white-space: nowrap;
+}
+
+/* A recessed track (same #ddd border + inset shadow as text inputs and
+   colour pickers) rather than a row of bordered buttons — the active
+   segment then reads as a raised chip sitting inside a groove, closer to
+   a physical switch than a button group. */
+.segmented {
+  display: flex;
+  gap: 2px;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+  padding: 2px;
+}
+
+/* Excluded from the general button {} shadow (see that rule's own
+   comment) — .is-active gets its own small lift instead, restricted to
+   just the active chip rather than every segment. */
+.segmented button {
+  flex: 1;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #555;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  box-shadow: none;
+}
+
+.segmented button:hover:not(.is-active) { background: #fff; border-color: var(--brand-green); }
+
+.segmented button.is-active {
+  background: #fff;
+  border-color: var(--brand-green);
+  color: #2f4a28;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+#link-editor-footer,
+#image-editor-footer,
+#share-invite-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* No side note to balance against (unlike link/image's own footers above),
+   so this one just packs Cancel/OK to the right — same shape as
+   #confirm-dialog-footer. */
+#add-course-dialog-footer,
+#sign-in-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+#linkDone,
+#linkCancel,
+#imageDone,
+#imageCancel,
+#addCourseOk,
+#addCourseCancel,
+#signInSend,
+#signInCancel,
+#shareInviteBtn,
+#shareInviteCancel,
+.timetable-draft-ok,
+.timetable-draft-cancel {
+  flex-shrink: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Reserved transparent rather than added only on hover — these buttons
+     have no fixed width, just content + padding, sitting in a
+     justify-content: flex-end footer row, so a border that only appears
+     on hover would widen the button and shove its neighbours in that row
+     sideways. Reserving it means hover only ever swaps the colour. */
+  border: 1px solid transparent;
+  color: #111;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#linkDone,
+#imageDone,
+#addCourseOk,
+#signInSend,
+#shareInviteBtn,
+.timetable-draft-ok {
+  background: var(--brand-green);
+  color: #fff;
+}
+
+/* Inverts on hover — solid green becomes the outline instead of the fill,
+   same "white bg, dark text, green border" language every other hover
+   state in the app now uses. */
+#linkDone:hover,
+#imageDone:hover,
+#addCourseOk:hover,
+#signInSend:hover,
+#shareInviteBtn:hover,
+.timetable-draft-ok:hover {
+  background: #fff;
+  color: #111;
+  border-color: var(--brand-green);
+}
+
+#linkCancel,
+#imageCancel,
+#addCourseCancel,
+#signInCancel,
+#shareInviteCancel,
+.timetable-draft-cancel {
+  background: var(--input-bg);
+  color: #555;
+}
+
+#linkCancel:hover,
+#imageCancel:hover,
+#addCourseCancel:hover,
+#signInCancel:hover,
+#shareInviteCancel:hover,
+.timetable-draft-cancel:hover { background: #fff; border-color: var(--brand-green); }
+
+#link-editor-note,
+#image-editor-note {
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+  line-height: 1.4;
+  color: #777;
+}
+
+#link-editor-note.is-error { color: #a06040; }
+
+/* ── Confirm dialog ── */
+/* Anchored near the trigger like the link/image/type-picker popovers above,
+   but a delete is disruptive enough to also dim the page — unlike those,
+   this backdrop actually shades the background rather than staying transparent. */
+#confirm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+#confirm-dialog {
+  position: fixed;
+  z-index: 21;
+  width: 300px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* An id beats the UA's `[hidden] { display: none }`, same reasoning as the
+   editor popovers above. */
+#confirm-dialog[hidden] { display: none; }
+
+#confirm-dialog-message {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--value-color);
+}
+
+#confirm-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+#confirmCancel,
+#confirmOk {
+  flex-shrink: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#confirmCancel {
+  background: var(--input-bg);
+  color: #555;
+}
+
+#confirmCancel:hover { background: #fff; border-color: var(--brand-green); }
+
+/* This is always the "Delete" confirmation (see openConfirmDialog()'s
+   callers — card/lesson/course removal) — same white-bg/red-text/
+   red-hover-border language as #delete-course-btn, for the same reason:
+   one consistent look for every button that reads "Delete." */
+#confirmOk {
+  background: #fff;
+  border: 1px solid transparent;
+  color: #BA0016;
+  transition: border-color 0.15s;
+}
+
+#confirmOk:hover { border-color: #BA0016; }
+
+/* Task breaks the boxed pattern: full width, no curve, ruled top and
+   bottom only. The rule is an inline SVG wave — vector, so it stays clean at
+   print resolution. One period is 2mm; the tint stays around 5% black. The
+   viewBox is 4×3 against a 2mm×1.5mm tile, so the scale stays uniform and the
+   stroke isn't distorted. */
+.card-block-boxed.is-task {
+  inset: 0;
+  border: none;
+  border-radius: 0;
+  padding: 2mm var(--card-pad);
+  /* A light tint of the header punch color, so the two stay visually
+     related if the user changes it. Screen-only accent — printed cards
+     are grayscale, so this carries no meaning there. */
+  background-color: var(--task-tint);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3' viewBox='0 0 4 3'%3E%3Cpath d='M0 1.5 Q 1 0.25 2 1.5 T 4 1.5' fill='none' stroke='%23999999' stroke-width='0.55' stroke-linecap='round'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3' viewBox='0 0 4 3'%3E%3Cpath d='M0 1.5 Q 1 0.25 2 1.5 T 4 1.5' fill='none' stroke='%23999999' stroke-width='0.55' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x, repeat-x;
+  background-position: left top, left bottom;
+  background-size: 2mm 1.5mm, 2mm 1.5mm;
+}
+
+/* Straight double rules instead of the wave — swap this class in to compare. */
+.card-block-boxed.is-task.rule-double {
+  background-image: none;
+  border-top: 0.9mm double #999999;
+  border-bottom: 0.9mm double #999999;
+}
+
+/* Task's box sits flush with the card edge (unlike the default boxed
+   inset), so its icon needs the border-width + icon-inset that Reflection
+   gets for free from its box, added back in here to land in the same spot. */
+.card-block-boxed.is-task .card-block-icon {
+  top: calc(var(--card-pad) + 1.65mm);
+  right: calc(var(--card-pad) + 1.65mm);
+}
+
+/* Markdown inside a box fills it rather than the whole block — the box already
+   supplies the inset and padding. */
+.card-block-boxed .card-block-markdown {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+/* Clear of the corner icon, matching the plain editor. */
+.card-block-boxed .card-block-markdown > * { padding-right: 4mm; }
+
+.card-block-boxed .card-block-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  padding: 0;
+  /* Keeps the wrapped text clear of the corner icon. */
+  padding-right: 4mm;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 8pt;
+  font-weight: 600;
+  line-height: var(--card-line);
+  color: #1a1a1a;
+}
+
+.card-block-boxed .card-block-input::placeholder { color: #c0c0c0; }
+
+.card-block-icon {
+  position: absolute;
+  top: 1.4mm;
+  right: 1.4mm;
+  width: 3.4mm;
+  height: 3.4mm;
+  color: var(--card-icon);
+  pointer-events: none;
+}
+
+.card-block-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── List (numbered blank lines) ── */
+/* Fills the box like .card-block-markdown/.card-block-input do (flex:1 in
+   the row-direction .card-block-boxed), but is itself a column: a fixed
+   prompt line on top, then the numbered lines sharing whatever's left. */
+.card-block-list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-block-list-header {
+  display: flex;
+  /* Top-aligned rather than centred: the prompt can grow to two or three
+     lines, and the count stepper should anchor to its first line rather
+     than drift to the middle of a tall one. */
+  align-items: flex-start;
+  gap: 1.5mm;
+  flex-shrink: 0;
+  /* Clear of the corner icon, matching .card-block-input/.card-block-markdown. */
+  padding-right: 4mm;
+}
+
+/* Also used, unmodified, for Matrix's own explanatory prompt. */
+.card-block-list-prompt {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 8pt;
+  font-weight: 600;
+  line-height: var(--card-line);
+  color: #1a1a1a;
+}
+
+.card-block-list-prompt::placeholder { color: #c0c0c0; }
+
+/* Screen-only chrome — the count is fixed once printed — so it stays out of
+   the way until the block is hovered, same as .card-block-remove. */
+.card-block-list-count {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.card-block:hover .card-block-list-count { opacity: 1; }
+
+.list-count-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background: #fff;
+  color: #444;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.list-count-btn:hover:not(:disabled) { color: #333; }
+.list-count-btn:disabled { opacity: 0.35; cursor: default; }
+
+.list-count-value {
+  min-width: 1em;
+  font-family: 'Barlow', sans-serif;
+  font-size: 8px;
+  text-align: center;
+  color: #777;
+}
+
+.card-block-list-items {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* One row each — the same rhythm the resize handle snaps to — sharing
+   whatever height is left after the prompt line via flex:1. */
+.card-block-list-item {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5mm;
+  border-bottom: 0.2mm solid #dedede;
+}
+
+.card-block-list-item:last-child { border-bottom: none; }
+
+.card-block-list-number {
+  flex-shrink: 0;
+  font-family: 'Barlow', sans-serif;
+  font-size: 7pt;
+  color: var(--punch-color);
+}
+
+/* ── Matrix (item rows × 1-2 rating columns) ── */
+.card-block-matrix {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+
+/* Prompt (explanatory text, e.g. "Rate each idea against...") and the
+   steppers share one row, same layout as List's header. align-items:
+   flex-start rather than center, since the prompt can grow to several
+   lines and the steppers should anchor to its first one. */
+.card-block-matrix-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5mm;
+  flex-shrink: 0;
+}
+
+/* Screen-only chrome — hover-revealed like the List count stepper. */
+.card-block-matrix-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.card-block:hover .card-block-matrix-toolbar { opacity: 1; }
+
+.card-block-matrix-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #fff;
+  border-radius: 3px;
+}
+
+.card-block-matrix-table {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  border-top: 0.2mm solid #dedede;
+  border-left: 0.2mm solid #dedede;
+}
+
+.card-block-matrix-item-heading,
+.card-block-matrix-rating-header {
+  min-width: 0;
+  border: none;
+  border-right: 0.2mm solid #dedede;
+  border-bottom: 0.2mm solid #dedede;
+  outline: none;
+  background: transparent;
+  padding: 0.8mm 1mm;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 7pt;
+  font-weight: 700;
+  color: #444;
+}
+
+.card-block-matrix-item-heading::placeholder { color: #c8c8c8; }
+
+.card-block-matrix-rating-header { text-align: center; }
+
+.card-block-matrix-item-cell,
+.card-block-matrix-rating-cell {
+  min-width: 0;
+  border-right: 0.2mm solid #dedede;
+  border-bottom: 0.2mm solid #dedede;
+}
+
+.card-block-matrix-legend {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5mm;
+}
+
+.card-block-matrix-caption {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 6pt;
+  color: #333333;
+}
+
+.card-block-matrix-caption::placeholder { color: #c0c0c0; }
+
+/* ── Key Idea (term, explanation, source) ── */
+/* Same warm amber already used for the image-fit warning note
+   (.card-block-image-note.is-warn) — reused here rather than inventing a new
+   accent, so a "highlighted" tint reads consistently across the app.
+   Flush like .is-task (no side inset, no corner radius) rather than
+   Reflection/List's inset-box — just a ruled top and bottom, no side
+   margin, so it doesn't need their stack/gap fix either. */
+.card-block-boxed.is-key-idea {
+  inset: 0;
+  border: none;
+  border-top: 0.25mm solid #cbb26b;
+  border-bottom: 0.25mm solid #cbb26b;
+  border-radius: 0;
+  padding: 1.6mm var(--card-pad);
+  background: #f6efd8;
+}
+
+.card-block-boxed.is-key-idea .card-block-icon { color: #8a6d2f; }
+
+/* Flush like .is-task, so its icon needs the same icon-inset add-back to
+   land at the same spot as Reflection/List's — but only on the right: the
+   left/right edges are borderless like .is-task's, while the top already
+   has its own 0.25mm border-top, so that side needs 0.25mm less added back
+   or the two would stack. */
+.card-block-boxed.is-key-idea .card-block-icon {
+  top: calc(var(--card-pad) + 1.4mm);
+  right: calc(var(--card-pad) + 1.65mm);
+}
+
+/* Serif throughout — term, explanation and source — reads as a dictionary
+   entry against the rest of the card's sans-serif/monospace type. */
+.card-block-key-idea {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8mm;
+  font-family: 'Barlow', system-ui, sans-serif;
+}
+
+.card-block-key-idea-term {
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  /* Clear of the corner icon, matching .card-block-input/.card-block-markdown. */
+  padding-right: 4mm;
+  font-family: inherit;
+  font-size: 9pt;
+  font-weight: 700;
+  color: #6b5322;
+}
+
+.card-block-key-idea-term::placeholder { color: #c9b98a; }
+
+/* The nested markdown editor otherwise keeps the fixed height it's given in
+   Task/Text's flat (non-column) box layout — here it needs to shrink
+   inside a column along with the term and source lines. */
+.card-block-key-idea .card-block-markdown { min-height: 0; }
+
+.card-block-key-idea .card-block-markdown > * { font-family: inherit; }
+
+.card-block-key-idea-source {
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  text-align: right;
+  font-family: inherit;
+  font-style: italic;
+  font-size: 6pt;
+  color: #a99a6e;
+}
+
+.card-block-key-idea-source::placeholder { color: #d8cca3; }
+
+/* ── Footnote ── */
+/* Inset left/right (unlike Key Idea/Task's flush rule) so the top line
+   reads as a quiet aside rather than a section break — this is what gives it
+   "a bit of margin" instead of running edge to edge. */
+.card-block-footnote {
+  position: absolute;
+  top: 0;
+  right: var(--card-pad);
+  bottom: 0;
+  left: var(--card-pad);
+  border: none;
+  border-top: 0.2mm solid #dedede;
+  outline: none;
+  background: transparent;
+  resize: none;
+  padding: 1mm 0 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 6pt;
+  line-height: var(--card-line);
+  color: #333333;
+}
+
+.card-block-footnote::placeholder { color: #c0c0c0; }
+
+/* ── Quote ── */
+/* Flush like Key Idea/Task — no outer margin. The two giant quote marks
+   are pure decoration (::before/::after on this wrapper, not real DOM), so
+   they can't be selected, copied or read by a screen reader — only the
+   actual text and reference below are real content. */
+.card-block-quote {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 1.6mm var(--card-pad);
+}
+
+/* The opening mark is anchored to the wrapper's own top, which works at any
+   block height: the glyph's ink sits near the top of its (much taller,
+   line-height 1) box, so "top: 0" always lands the visible ink just inside
+   the wrapper regardless of how far the (clipped) bottom of that box
+   overflows past the wrapper's own bottom edge. */
+.card-block-quote::before {
+  content: '“';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 20mm;
+  line-height: 1;
+  color: #ececec;
+  pointer-events: none;
+}
+
+.card-block-quote-text {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  padding: 0;
+  /* Same indent Text's bullet/numbered lists use (.card-block-preview
+     :is(ul, ol)), so a quote reads like it's already "inset" the way a
+     list item is, rather than flush with the block's own left edge. */
+  padding-left: 3.2mm;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-style: italic;
+  font-size: 9pt;
+  line-height: var(--card-line);
+  color: #1a1a1a;
+}
+
+.card-block-quote-text::placeholder { color: #c8c8c8; }
+
+.card-block-quote-reference-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 1mm;
+  flex-shrink: 0;
+}
+
+/* The closing mark can't use the same "top: 0, on the wrapper" trick as the
+   opening one — that would put its ink near the wrapper's top, not the
+   bottom where a closing quote belongs. Anchoring it to this reference row
+   instead reliably lands it near the reference line regardless of the
+   block's overall height, since this row's own height barely changes.
+   "top: -10mm" (rather than 0) is what actually does the work: at
+   line-height 1, the glyph's own ink sits roughly a third of the way down
+   its 20mm line box, not at the very top, so anchoring at the row's literal
+   top only ever showed a sliver of empty leading before the clip — pulling
+   the whole box up by ~10mm brings the ink itself into the visible span
+   above the row instead. z-index: -1 keeps the dash and reference text
+   above it despite this row being a stacking context of its own
+   (position: relative). */
+.card-block-quote-reference-row::after {
+  content: '”';
+  position: absolute;
+  z-index: -1;
+  top: -10mm;
+  right: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 20mm;
+  line-height: 1;
+  color: #ececec;
+  pointer-events: none;
+}
+
+.card-block-quote-dash {
+  flex-shrink: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 7pt;
+  color: #888;
+}
+
+.card-block-quote-reference {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 7pt;
+  color: #555;
+}
+
+.card-block-quote-reference::placeholder { color: #c8c8c8; }
+
+.card-block-label {
+  position: absolute;
+  top: 50%;
+  left: var(--card-pad);
+  transform: translateY(-50%);
+  padding-right: 6mm;
+  font-family: 'Barlow', sans-serif;
+  font-size: 2.2mm;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #b8b8b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+/* Set by lockBlockContent() (see buildCard()'s interactive: false path,
+   used by the read-only student viewer) — pointer-events: none itself is
+   set inline by JS there, which already makes cursor styling moot (nothing
+   inside can be "hovered" for hit-testing purposes once it can't receive
+   pointer events at all). This class exists as a hook for anything visual
+   worth adjusting later, not load-bearing today. */
+.is-locked { cursor: default; }
+
+/* Sits inside its block, so reaching for it never breaks the hover. */
+.card-block-remove {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  background: #fff;
+  color: #444;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.card-block:hover .card-block-remove { opacity: 1; }
+.card-block-remove:hover { color: #BA0016; border-color: #BA0016; }
+
+/* Grip on the left edge, revealed with the × on the right. Dragging from here
+   rather than the block body leaves text selection in the editors alone. */
+.card-block-grip {
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 9px;
+  height: 16px;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background-image: radial-gradient(circle, #9a9a9a 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: center;
+}
+
+.card-block:hover .card-block-grip { opacity: 1; }
+.card-block-grip:active { cursor: grabbing; }
+
+.card-block.dragging { opacity: 0.35; }
+
+/* Insertion line between blocks. The add-slot's ::before is already its dashed
+   outline, so its marker uses ::after. */
+.card-block.drop-above::before,
+.card-block.drop-below::after,
+.card-block-add.drop-above::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #8a8a8a;
+  border-radius: 1px;
+  z-index: 4;
+}
+
+.card-block.drop-above::before,
+.card-block-add.drop-above::after { top: -1px; }
+.card-block.drop-below::after { bottom: -1px; }
+
+/* Target card hasn't room even for the block's minimum height. */
+.card-body.is-rejecting {
+  outline: 1px dashed #c99;
+  outline-offset: -1px;
+  background: rgba(200, 120, 100, 0.05);
+}
+
+/* Drop is allowed, but the block will lose height to fit. */
+.card-body.is-shrinking {
+  outline: 1px dashed #c8b06a;
+  outline-offset: -1px;
+}
+
+/* Straddles the bottom edge so the grab area is forgiving without the block
+   itself needing padding. */
+.card-block-resize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 6px;
+  z-index: 3;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.card-block-resize::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: #8a8a8a;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.card-block-resize:hover::after,
+.card-body.is-resizing .card-block-resize:active::after { opacity: 1; }
+
+/* The slot would be shoved out of the card while a block grows into the space
+   it is sitting in; it comes back on release. */
+.card-body.is-resizing .card-block-add { display: none; }
+
+/* Dotted add-slot, mirroring the card-level one but block-sized. The button
+   itself stays exactly its whole grid rows; the dashes are drawn by a
+   pseudo-element inset 0.5mm, which lays out at sub-pixel precision where
+   outline-offset would round to whole pixels. isolation + z-index keep it
+   behind the `+`. */
+/* Excluded from the general button box-shadow/radius (see this file's
+   button {} rule) — this is content drawn on the printed/on-screen card
+   itself (a dashed placeholder area on its paper surface, via ::before
+   below), not app chrome floating above it; a drop shadow here would read
+   as ink on the physical card, not a UI affordance. */
+.card-block-add {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  flex-shrink: 0;
+  background: transparent;
+  color: #C2C2C2;
+  font-family: inherit;
+  font-size: 4mm;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.card-block-add::before {
+  content: '';
+  position: absolute;
+  inset: 0.5mm;
+  z-index: -1;
+  border: 0.2mm dashed #C2C2C2;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.card-block-add:hover { color: #8a8a8a; }
+
+.card-block-add:hover::before {
+  border-color: #8a8a8a;
+  background: #fff;
+}
+
+.card-header,
+.card-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* These bands hold uppercase text with no descenders, so the ink sits high in
+   its line box and reads as off-centre even when the box is centred. Nudge the
+   glyphs down by half the descender space. Scales with font-size. */
+.card-header-text,
+.card-footer-text,
+.card-lesson-count,
+.card-number {
+  transform: translateY(var(--cap-nudge));
+}
+
+.card-header { top: 0; }
+.card-footer { bottom: 0; }
+
+/* Positioned from the card edge rather than the header's padding, since it has
+   to line up with a physical punch. */
+.card-punch {
+  position: absolute;
+  left: var(--punch-left);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--punch-size);
+  height: var(--punch-size);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Title and count stack against the right edge of the header. Taking the
+   remaining width rather than hugging its content is what keeps a long title
+   ellipsising instead of running under the punch. */
+.card-header-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  gap: 0.4mm;
+}
+
+/* Derived, so moving or resizing the punch moves the stack with it. */
+.card-punch + .card-header-stack {
+  margin-left: calc(var(--punch-left) + var(--punch-size) + var(--punch-gap) - var(--card-pad));
+}
+
+/* Blank grid cards (see buildBlankCard()) print on the back of a real
+   card, so left/right needs mirroring from everything above — punch on
+   the right, title/footer text hugging the left, so a physical punch
+   still lines up once the sheet is flipped for double-sided printing. */
+.card.is-blank .card-punch {
+  left: auto;
+  right: var(--punch-left);
+}
+
+.card.is-blank .card-header-stack { align-items: flex-start; }
+
+.card.is-blank .card-punch + .card-header-stack {
+  margin-left: 0;
+  margin-right: calc(var(--punch-left) + var(--punch-size) + var(--punch-gap) - var(--card-pad));
+}
+
+.card-header-text {
+  max-width: 100%;
+  font-family: 'Barlow', sans-serif;
+  font-size: 2.4mm;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-footer-text {
+  font-family: 'Barlow', sans-serif;
+  font-size: 2.4mm;
+  letter-spacing: 0.08em;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Mirrors the footer the same way .card.is-blank mirrors the header above
+   — course text to the right, where .card-number would otherwise sit
+   (never actually present on a blank card, so no clash). */
+.card.is-blank .card-footer-text { margin-left: auto; }
+
+.card-lesson-count,
+.card-number {
+  font-family: 'Barlow', sans-serif;
+  font-size: 2.4mm;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* The footer is a row, so its number is pushed right against the course text.
+   The header count is already right-aligned by its stack. */
+.card-number {
+  margin-left: auto;
+  padding-left: 2mm;
+}
+
+/* Remove control, revealed on hover */
+.card-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  background: #fff;
+  color: #444;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+/* Revealed only while the pointer is over the header — the card body belongs
+   to content blocks. Held open while the pointer is on the button itself,
+   which overlaps the header and would otherwise vanish as you reached for it.
+   With the header switched off there is nothing to hover, so the whole card
+   falls back to being the trigger. */
+.card-frame:has(.card-header:hover) .card-remove,
+.card-frame:not(:has(.card-header)):hover .card-remove,
+.card-remove:hover { opacity: 1; }
+
+.card-remove:hover { color: #BA0016; border-color: #BA0016; }
+
+/* ── Content type picker ── */
+#type-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+#type-picker {
+  position: fixed;
+  z-index: 11;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+}
+
+#type-picker h2 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+  margin-bottom: 10px;
+}
+
+#type-picker-options {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* Four .type-option tiles (62px) plus their gaps — wraps a 5th+ tile onto
+     its own row instead of growing the picker wider. */
+  max-width: calc(4 * 62px + 3 * 6px);
+}
+
+.type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  width: 62px;
+  /* No explicit height — this tile's vertical size comes from its own
+     content (icon + label), unlike the fixed-size icon buttons elsewhere.
+     That's exactly why the border below has to be reserved (transparent)
+     from the start rather than only added on hover: with no fixed height
+     for border-box to hold steady, a border that only *appears* on hover
+     adds its own width straight onto the tile's height, growing that one
+     tile and — since these wrap in a flex row — visibly shoving every
+     tile after it down a couple of pixels on every hover. Reserving the
+     border means hover only ever changes its colour, never its width, so
+     nothing else in the grid moves. */
+  border: 1px solid transparent;
+  background: var(--input-bg);
+  color: var(--value-color);
+  padding: 9px 4px 8px;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1.3;
+  letter-spacing: 0.03em;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.type-option svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.type-option:hover:not(:disabled),
+.type-option:focus-visible:not(:disabled) {
+  background: #fff;
+  border-color: var(--brand-green);
+  outline: none;
+}
+
+.type-option:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── The dotted "add another card" slot ── */
+.add-card {
+  border: 1px dashed #C2C2C2;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: 300;
+  color: #C2C2C2;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.add-card:hover {
+  border-color: #8a8a8a;
+  color: #8a8a8a;
+  background: #fff;
+}
+
+/* ── Present ──────────────────────────────────────────────────
+   One slide per card in the active lesson — see openPresentView()/
+   renderPresentSlide() in course-builder.js. viewport-scaled (clamp()
+   against vw/vh) rather than fixed px sizes, since this is meant to fill
+   whatever screen it's actually projected on. Dark: these are meant to
+   hold a little content, presented at a distance — not a page of prose —
+   so it reads more like signage than a document. Barlow throughout —
+   kicker, card count, footer, title and slide content alike — matching
+   the same font used for card content everywhere else in the app. */
+#present-view {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #121212;
+  display: flex;
+}
+
+/* id beats the UA's `[hidden] { display: none }` by origin, same
+   reasoning as #cover-view[hidden] elsewhere. */
+#present-view[hidden] { display: none; }
+
+#present-slide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* Left/right match the top padding (the space above the lesson name)
+     rather than their own, wider, vw-based value. */
+  padding: 8vh 8vh 5vh;
+  font-family: 'Barlow', system-ui, sans-serif;
+}
+
+#present-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+#present-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4vw;
+  min-width: 0;
+}
+
+/* Same card-shaped brand mark as #lesson-title-mark in the sidebar (and
+   the cover's own green mark) — same --card-ratio/--punch-color tokens,
+   just set on #present-view directly rather than inherited, since this
+   overlay isn't a descendant of #workspace-inner where those are
+   normally set (see readParams() in course-builder.js). Its `height` is
+   set in JS (renderPresentSlide(), after the text is in place) to match
+   #present-header-text's own real height — align-items: stretch plus
+   aspect-ratio alone (the first version of this) turned out not to be
+   reliable: a flex item's own auto width resolves to 0 before
+   aspect-ratio gets a chance to derive it from the stretched height, at
+   least in the browser this was tested in. */
+#present-mark {
+  aspect-ratio: var(--card-ratio, 80 / 160);
+  background: var(--punch-color, #00bb27);
+  flex-shrink: 0;
+}
+
+#present-header-text { min-width: 0; }
+
+#present-lesson {
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: clamp(11px, 1.2vw, 17px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+  margin-bottom: 0.5em;
+}
+
+#present-title {
+  font-size: clamp(26px, 4.2vw, 60px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  margin: 0;
+}
+
+#present-count {
+  flex-shrink: 0;
+  padding-top: 0.3em;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: clamp(11px, 1.1vw, 16px);
+  letter-spacing: 0.08em;
+  color: #8a8a8a;
+  white-space: nowrap;
+}
+
+#present-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 6vh;
+  font-size: clamp(17px, 2.3vw, 32px);
+  line-height: 1.6;
+  color: #e0e0e0;
+}
+
+#present-content.is-empty { display: none; }
+#present-content p { margin: 0 0 0.6em; }
+#present-content p:last-child { margin-bottom: 0; }
+#present-content :is(ul, ol) { margin: 0 0 0.6em; padding-left: 1.1em; }
+#present-content li { margin-bottom: 0.2em; }
+#present-content strong { font-weight: 800; }
+#present-content em { font-style: italic; }
+
+#present-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 3vh;
+  padding-top: 2vh;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+#present-footer-text {
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: clamp(10px, 0.9vw, 13px);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+/* Kept its own real background/border rather than trying to blend or
+   invert it into the dark slide — a logo reads as a logo, corner-badge
+   style, the same way it would on any other dark surface. */
+#present-logo {
+  width: clamp(20px, 1.8vw, 28px);
+  height: clamp(20px, 1.8vw, 28px);
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+#present-close,
+#present-prev,
+#present-next {
+  position: fixed;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#present-close svg,
+#present-prev svg,
+#present-next svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#present-close:hover,
+#present-prev:not(:disabled):hover,
+#present-next:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ddd;
+}
+
+#present-close { top: 20px; right: 20px; }
+#present-prev { top: 50%; left: 20px; transform: translateY(-50%); }
+#present-next { top: 50%; right: 20px; transform: translateY(-50%); }
+
+#present-prev:disabled,
+#present-next:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+/* ── App loading overlay ──────────────────────────────────────
+   Shown by default, hidden at the end of the Init section in
+   course-builder.js once it's actually known whether courses is empty
+   or not. Above #first-run-gate's own 2000 — it needs to cover that
+   too while state is still loading, not just the sidebar/workspace. */
+#app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  background: var(--workspace-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+#app-loading[hidden] { display: none; }
+
+#app-loading-logo {
+  width: 40px;
+  height: 40px;
+  opacity: 0.9;
+}
+
+#app-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--sidebar-border);
+  border-top-color: var(--brand-green);
+  border-radius: 50%;
+  animation: app-loading-spin 0.8s linear infinite;
+}
+
+@keyframes app-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── First-run gate ───────────────────────────────────────────
+   Shown whenever there are zero courses — see updateFirstRunGate() in
+   course-builder.js. Above #present-view's own 1000/1001 (defensive
+   headroom only; the two can't actually be open together, since
+   #present-btn lives inside #sidebar, which is inert while this is up). */
+#first-run-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--workspace-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#first-run-gate[hidden] { display: none; }
+
+#first-run-card {
+  width: 320px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+#first-run-logo {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+}
+
+#first-run-card h1 {
+  font-size: 15px;
+  color: var(--heading-color);
+}
+
+#first-run-card p {
+  font-size: 11px;
+  color: var(--label-color);
+  margin-bottom: 6px;
+}
+
+#first-run-card .param-row {
+  width: 100%;
+  text-align: left;
+}
+
+#first-run-card input {
+  width: 100%;
+  height: 32px;
+  background: var(--input-bg);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: var(--value-color);
+  padding: 7px;
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.08) inset;
+}
+
+#first-run-card input:focus { border-color: #555; }
+
+#first-run-card label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--label-color);
+  margin-bottom: 4px;
+}
+
+#firstRunCreateBtn {
+  width: 100%;
+  height: 36px;
+  margin-top: 8px;
+  background: var(--brand-green);
+  color: #fff;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+/* ── Replay tour ── */
+/* Same full-width neutral weight as #account-status-action — sits right
+   below it in the profile panel, so it inherits that border-top/gap rhythm
+   rather than needing its own. */
+#profile-help {
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 10px;
+}
+
+#replay-tour-btn {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #111;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#replay-tour-btn:hover { background: #fff; border: 1px solid var(--brand-green); }
+
+/* ── Onboarding tour ──────────────────────────────────────────
+   Built/torn down at runtime by onboarding-tour.js, not static markup —
+   see runTour(). The scrim deliberately covers the highlighted element too
+   (pointer-events intact everywhere under it) so a mid-tour click can't
+   reach the real UI — only the tooltip's own buttons are live. */
+#tour-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+#tour-highlight {
+  position: fixed;
+  z-index: 2101;
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 4px rgba(214, 232, 208, 0.35);
+  transition: left 0.15s, top 0.15s, width 0.15s, height 0.15s;
+}
+
+#tour-tooltip {
+  position: fixed;
+  z-index: 2102;
+  width: 280px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#tour-tooltip-step {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+#tour-tooltip-title {
+  font-size: 13px;
+  color: var(--heading-color);
+}
+
+#tour-tooltip-body {
+  font-size: 11px;
+  color: var(--value-color);
+  line-height: 1.4;
+}
+
+#tour-tooltip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#tour-tooltip-nav {
+  display: flex;
+  gap: 8px;
+}
+
+#tour-skip-btn,
+#tour-back-btn,
+#tour-next-btn {
+  flex-shrink: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  color: #111;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  background: #fff;
+}
+
+#tour-next-btn {
+  background: var(--brand-green);
+  color: #fff;
+}
+
+#tour-back-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
