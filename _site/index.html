@@ -70,11 +70,6 @@
   <div class="hp-hero-photo"></div>
 
   <div class="hp-hero-inner">
-    <!-- The shadow lives on this wrapper (filter: drop-shadow follows
-         the clipped panel's actual visible silhouette, island cutout
-         included) rather than on the panel itself — a plain box-
-         shadow would just get clipped away along with everything
-         else outside .hp-hero-panel's own clip-path. -->
     <div class="hp-hero-panel-shadow">
       <div class="hp-hero-panel">
         <h1>Believe</h1>
@@ -91,13 +86,6 @@
 </section>
 
 <section id="hp-next" class="hp-better-section">
-  <!-- Tall track (100vh per slide) with a sticky-pinned inner layer —
-       scrolling through the track's own extra height steps through
-       the carousel (see src/js/custom.js), and once the track's
-       height is used up the section scrolls away and the page
-       continues normally. Deliberately not wheel-event hijacking:
-       this drives off real scroll position, so trackpad/mobile/
-       keyboard scrolling all just work as they normally would. -->
   <div class="hp-better-track">
     <div class="hp-better-sticky">
       <div class="hp-better-wrap">
@@ -143,19 +131,6 @@
   </div>
 </section>
 
-<!-- Decorative hand-drawn-style wobbly line starting from the bottom
-     edge of .hp-better-carousel itself (not the outer .hp-better-
-     section, which has extra empty space below the carousel from its
-     own sticky-viewport height) — same breakout technique as
-     .hero-arrow on /course (see custom.css): a zero-height div right
-     after the carousel section, with the SVG absolutely positioned
-     (shifted up via top: -132px to reach back up to the carousel's
-     own bottom edge) and tall enough to paint down through the next
-     two sections' normal document flow via overflow: visible.
-     Coordinates are plain px, calibrated against this page's actual
-     rendered layout at a ~1420px desktop viewport; hidden on
-     narrower screens where the sections reflow and the fixed offsets
-     no longer line up. -->
 <div class="hp-wobble-arrow" aria-hidden="true">
   <svg width="1415" height="540" viewBox="0 0 1415 540">
     <path class="hp-wobble-arrow-curl" d="
@@ -182,13 +157,6 @@
 
     <div class="hp-product-grid">
       <div class="hp-product-column">
-        <!-- The exact card-behind-cover markup from the /course hero's
-             own .hero-card-stack (same classes, full wireframe card
-             detail, true mm size) — just with the card's own peek
-             tightened way down (see .hp-product-visual--course's
-             overrides below) instead of the hero's own dramatic fanned
-             offset, so it doesn't dominate a three-up row. Sits above
-             the panel, not inside it. -->
         <div class="hp-product-visual hp-product-visual--course">
           <div class="hero-card-stack">
             <div class="hero-card-back"></div>
@@ -317,21 +285,8 @@
       </div>
 
       <div class="hp-product-column">
-        <!-- A Field Notes-style notebook at the same true scale as the
-             course cover beside it — solid cover colour, a small
-             notch cut from the top-right corner revealing an
-             off-white paper colour beneath, and the same "Name /
-             Contact" write-in box as Course's own cover (reusing
-             .hero-cover-front-contact directly) rather than a
-             separate placeholder label. 10% wider than Course/Book
-             (see .hp-product-note's own width) rather than sharing
-             their 80:160 ratio, per the real product. -->
         <div class="hp-product-visual hp-product-visual--note">
           <div class="hp-product-note">
-            <!-- Procedural grain, not an image asset — feTurbulence
-                 generates the noise itself, so this filter needs no
-                 source content of its own; .hp-product-note-grain
-                 below is just an empty box for it to render into. -->
             <svg width="0" height="0" style="position: absolute;">
               <filter id="hp-note-grain">
                 <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
@@ -358,13 +313,6 @@
       </div>
 
       <div class="hp-product-column">
-        <!-- Same cover treatment as Course's own (.hero-cover-front) —
-             brand mark, code/title panel, true 81×161mm size, and the
-             same bottom-left author line as Course's own person
-             credit — minus the "Name/Contact" write-in box, since a
-             published book's cover doesn't need one. Cover photo set
-             via the background-image override on .hp-product-visual--book
-             below. -->
         <div class="hp-product-visual hp-product-visual--book">
           <div class="hero-cover-front">
             <div class="hero-cover-front-info">
@@ -388,14 +336,6 @@
   </div>
 </section>
 
-<!-- Course is the only one of the three actually out — a spotlight
-     between the product grid and "Why smartphone-sized?" so it isn't
-     lost among Note/Book's own "revealed soon" placeholders above.
-     The two panels are copied verbatim from /course's own "What is a
-     Pockit Course?" .feature-grid-2 (same icon art, headings, copy)
-     — just the two panels, not that page's further 9-icon grid below
-     them — so this reads as a preview of that page rather than a
-     rewrite of it. -->
 <section class="page-section hp-course-spotlight">
   <div class="page-section-inner page-section-inner--wide">
     <h2>The Pockit Course: Available now!</h2>
@@ -403,13 +343,9 @@
     <div class="feature-grid-2">
       <div class="feature-item">
         <div class="feature-item-art">
-          <!-- The same laptop-and-course-viewer construction as the
-               "Blend the physical and the digital" icon above. -->
           <svg viewBox="0 0 400 240">
             <rect width="400" height="240" fill="#f6f6f6"/>
 
-            <!-- Scaled down around the icon's centre for more padding
-                 around the laptop. -->
             <g transform="translate(200 120) scale(0.82) translate(-200 -120)">
               <rect x="20" y="20" width="360" height="196" rx="10" fill="#ececec" stroke="#ddd" stroke-width="2"/>
               <rect x="30" y="30" width="340" height="180" rx="6" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
@@ -429,10 +365,6 @@
               <line x1="208" y1="72" x2="248" y2="72" stroke="#ddd" stroke-width="3"/>
               <line x1="208" y1="86" x2="232" y2="86" stroke="#e5e5e5" stroke-width="2"/>
 
-              <!-- Adding a block: a "+" affordance below the card's
-                   existing content opens a small block-type picker
-                   beneath it, echoing course-builder's own add-block
-                   toolbar. -->
               <circle cx="232" cy="104" r="8" fill="var(--brand-green)"/>
               <line x1="226" y1="104" x2="238" y2="104" stroke="#fff" stroke-width="2"/>
               <line x1="232" y1="98" x2="232" y2="110" stroke="#fff" stroke-width="2"/>
@@ -457,15 +389,10 @@
 
       <div class="feature-item">
         <div class="feature-item-art">
-          <!-- A landscape A4 sheet, two cards printed 2-up (course-
-               builder's print output) — then, to its right, the
-               course cover and cards, same fanned technique as icon 2
-               above, as if freshly cut from that sheet. -->
           <svg viewBox="0 0 400 240">
             <rect width="400" height="240" fill="#f6f6f6"/>
 
             <rect x="20" y="49" width="200" height="142" rx="4" fill="#fff" stroke="#ddd" stroke-width="2"/>
-            <!-- Folded corner, tucked inward. -->
             <path d="M196 49 L196 73 L220 73 Z" fill="#e5e5e5" stroke="#ddd" stroke-width="1"/>
             <line x1="196" y1="49" x2="220" y2="73" stroke="#ccc" stroke-width="1"/>
 

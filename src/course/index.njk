@@ -15,16 +15,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <span class="hero-cta-note">No sign in required.</span>
       </div>
 
-      <!-- Decorative hand-drawn-style arrow pointing down from the CTA
-           to the "Why the Pockit Course?" heading below — calibrated
-           (see .hero-arrow in custom.css) against this page's actual
-           layout at a ~1400px desktop viewport; hidden on narrow
-           screens where the two-column hero collapses and the offsets
-           no longer line up. Sits in normal flow right after the CTA
-           row (so its start always tracks the button regardless of
-           hero's own height, which is usually dominated by the taller
-           card stack beside it) but the SVG itself breaks out below via
-           absolute positioning to reach down into the next section. -->
       <div class="hero-arrow" aria-hidden="true">
         <svg width="280" height="420" viewBox="0 0 280 420">
           <path class="hero-arrow-curl" d="
@@ -44,23 +34,7 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
     </div>
 
     <div class="hero-image">
-      <!-- A recreation of a real course-builder lesson card (see
-           .card/.card-header/.card-footer in
-           src/course-builder/css/style.css and buildCard() in
-           src/course-builder/js/render-card.js) — same 80mm × 160mm size,
-           header/footer structure, hole-punch and colours. Body content
-           still TODO; for now it's just header + footer over a blank
-           card. In front of it, offset to the left, the course's front
-           cover (see #cover-front/#cover-front-mark/#cover-front-info in
-           src/course-builder/index.html + css/style.css and
-           renderCoverView() in js/course-builder.js) — same 81mm × 161mm
-           size (1mm bigger than the card, same as the real cover), brand
-           mark, code/title panel and handwritten name/contact prompt —
-           so the card looks like it's sliding out from underneath it. -->
       <div class="hero-card-stack">
-        <!-- A second card behind the front one, barely peeking out — just
-             enough to read as a small stack of lesson cards, not a
-             single one. -->
         <div class="hero-card-back"></div>
 
         <div class="hero-card">
@@ -72,15 +46,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
             </div>
           </div>
 
-          <!-- Wireframe placeholders standing in for real card content —
-               loosely modelled on course-builder's own block types (see
-               BLOCK_TYPES in src/course-builder/js/block-types.js): a
-               Heading, a Text block, a full-width Image block, another
-               Text block, a Link (QR) block (mirrored from the real
-               card's QR-on-the-left layout, purely for this stylised
-               wireframe), then a Task/Reflection-style block (boxed,
-               question line + blank ruled space for a written answer)
-               pushed down to fill the rest of the card. -->
           <div class="hero-card-body">
             <span class="hero-card-wire-heading"></span>
 
@@ -109,19 +74,12 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
                 <span class="hero-card-wire-line"></span>
               </div>
               <svg class="hero-card-wire-qr" viewBox="0 0 24 24">
-                <!-- Finder squares (the three corner markers every real QR
-                     code has). -->
                 <rect x="1" y="1" width="6" height="6"/>
                 <rect x="3" y="3" width="2" height="2"/>
                 <rect x="17" y="1" width="6" height="6"/>
                 <rect x="19" y="3" width="2" height="2"/>
                 <rect x="1" y="17" width="6" height="6"/>
                 <rect x="3" y="19" width="2" height="2"/>
-                <!-- Scattered data cells, deliberately irregular rather than
-                     evenly spaced, so it reads as noise rather than a
-                     pattern — kept off the outer edge (a real QR code
-                     always has a blank quiet zone around it) and out of
-                     the finder squares' own corners above. -->
                 <rect x="8" y="2" width="2" height="2"/>
                 <rect x="10" y="2" width="2" height="2"/>
                 <rect x="8" y="6" width="2" height="2"/>
@@ -184,9 +142,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
           <div class="hero-cover-front-info">
             <div class="hero-cover-front-code">PKT-101</div>
             <div class="hero-cover-front-title">Pockit Course Basics</div>
-            <!-- Author, from the Profile panel on a real cover — see
-                 #cover-front-person in src/course-builder/index.html and
-                 renderCoverView() in js/course-builder.js. -->
             <div class="hero-cover-front-person">
               <div class="hero-cover-front-person-name">Ian Allan</div>
               <div class="hero-cover-front-person-role">Senior Lecturer, EIT</div>
@@ -207,8 +162,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
       <strong>Tactile workbook-based learning is still the best.</strong> But we gave up on workbooks because they were too hard to maintain compared to throwing stuff online. Well, not anymore!
     </p>
 
-    <!-- Two in-class photos, side by side, equal size (see
-         .why-photo-row). -->
     <div class="why-photo-row">
       <img src="/images/in-class-03.jpg" alt="Two people writing notes on sticky notes laid out on a large sheet of paper.">
       <img src="/images/in-class-04.jpg" alt="A hand holding a folded printed booklet on a table, with a QR-coded card nearby.">
@@ -216,33 +169,19 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
     <p class="why-photo-caption">An earlier iteration of the Pockit Book that started it all &mdash; proved the value of the concept, and proved they were too much effort for a typical teacher to produce.</p>
 
     <div class="feature-grid">
-      <!-- 1. An end to death-by-PowerPoint — a widescreen slide behind,
-           the Pockit card-shaped mark (same 80:160 rectangle used
-           throughout — nav motif, cover mark) overtaking its corner. -->
-      <!-- 1. Bring an end to death-by-PowerPoint — a whole deck (slides
-           stacked/peeking behind the front one), a full-width title, a
-           wall of bullets, two overlapping photos, and the universal
-           "banned" circle-and-slash — thick and translucent — over the
-           top of it. Full-bleed art at the top of the card, not a small
-           icon — see .feature-item-art in custom.css. -->
       <div class="feature-item">
         <div class="feature-item-art">
           <svg viewBox="0 0 400 240">
             <rect width="400" height="240" fill="#f6f6f6"/>
 
-            <!-- The slide, presented on a laptop screen — same laptop
-                 treatment as icon 3. Scaled down around the icon's
-                 centre for more padding around it. -->
             <g transform="translate(200 120) scale(0.82) translate(-200 -120)">
               <rect x="20" y="20" width="360" height="196" rx="10" fill="#ececec" stroke="#ddd" stroke-width="2"/>
               <rect x="10" y="219" width="380" height="10" rx="5" fill="#ececec" stroke="#ddd" stroke-width="2"/>
               <rect x="180" y="222" width="40" height="4" rx="2" fill="#ddd"/>
               <rect x="30" y="30" width="340" height="180" rx="6" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
 
-              <!-- Title, right across the slide. -->
               <rect x="48" y="46" width="296" height="14" rx="3" fill="#ccc"/>
 
-              <!-- Bullets. -->
               <circle cx="54" cy="82" r="3" fill="#bbb"/>
               <line x1="65" y1="82" x2="185" y2="82" stroke="#ddd" stroke-width="4" stroke-linecap="round"/>
               <circle cx="54" cy="98" r="3" fill="#bbb"/>
@@ -256,14 +195,11 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
               <circle cx="54" cy="162" r="3" fill="#bbb"/>
               <line x1="65" y1="162" x2="155" y2="162" stroke="#ddd" stroke-width="4" stroke-linecap="round"/>
 
-              <!-- Two overlapping photos. -->
               <rect x="268" y="108" width="92" height="68" rx="4" fill="#f4f4f4" stroke="#e5e5e5" stroke-width="2"/>
               <rect x="248" y="94" width="92" height="68" rx="4" fill="#fff" stroke="#ddd" stroke-width="2"/>
               <circle cx="266" cy="111" r="5" fill="none" stroke="#ccc" stroke-width="2"/>
               <path d="M251 155 L270 136 L283 149 L295 138 L336 158" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 
-              <!-- Banned — half the previous size, solid (no
-                   transparency) but the same pale red it read as before. -->
               <circle cx="200" cy="120" r="48" fill="none" stroke="#e8a8a3" stroke-width="12"/>
               <line x1="166" y1="86" x2="234" y2="154" stroke="#e8a8a3" stroke-width="12" stroke-linecap="round"/>
             </g>
@@ -273,19 +209,11 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>They're not fun to create and they're not fun to receive. Break out of the mindset, while still thinking in learning blocks.</p>
       </div>
 
-      <!-- 2. Publish as you go — a bound book (banned, same style as
-           the slide deck above) on one side; an arrow across to a
-           folder with individual cards spilling out of it on the
-           other — one big workbook replaced by a growing set of
-           cards, not by nothing. -->
       <div class="feature-item">
         <div class="feature-item-art">
           <svg viewBox="0 0 400 240">
             <rect width="400" height="240" fill="#f6f6f6"/>
 
-            <!-- The old workbook — drawn obliquely (a slight tilt plus
-                 a page-edge sliver down its right side) so it reads
-                 as a bound book, not a flat sheet. -->
             <g transform="rotate(-8 95 120)">
               <rect x="46" y="42" width="99" height="149" rx="3.5" fill="#fff" stroke="#ddd" stroke-width="2.3"/>
               <path d="M144 48 L157 55 L157 178 L144 185 Z" fill="#ececec" stroke="#ddd" stroke-width="1.7" stroke-linejoin="round"/>
@@ -300,13 +228,9 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
               <path d="M101 42 L101 68 L110 59 L119 68 L119 42 Z" fill="#ddd" stroke="none"/>
             </g>
 
-            <!-- X, same size as the slide deck's ban circle (r=48). -->
             <line x1="61" y1="86" x2="129" y2="154" stroke="#e8a8a3" stroke-width="12" stroke-linecap="round"/>
             <line x1="61" y1="154" x2="129" y2="86" stroke="#e8a8a3" stroke-width="12" stroke-linecap="round"/>
 
-            <!-- A folder and cards, all the same size, fanned out
-                 peeking to the right — same technique as
-                 .hero-card-back/.hero-card in the hero above. -->
             <rect x="245" y="46" width="64" height="129" rx="7" fill="#fff" stroke="#ddd" stroke-width="2.3" transform="rotate(11 278 111)"/>
             <rect x="232" y="51" width="64" height="129" rx="7" fill="#fff" stroke="#ddd" stroke-width="2.3" transform="rotate(6 264 115)"/>
             <rect x="218" y="56" width="64" height="129" rx="7" fill="var(--brand-green)" stroke="none"/>
@@ -318,10 +242,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>The old full-course workbooks were dread-inducing to create and maintain. We prefer to create and adapt as we go now.</p>
       </div>
 
-      <!-- 3. Blend the physical and the digital — a laptop running the
-           course viewer (left nav, a row of course cards, the fourth
-           only partly on screen) alongside the folder and cards from
-           icon 2 above, in physical card form. -->
       <div class="feature-item">
         <div class="feature-item-art">
           <svg viewBox="0 0 400 240">
@@ -331,8 +251,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
               <rect x="26" y="30" width="202" height="126" rx="3"/>
             </clipPath>
 
-            <!-- Laptop, shifted right and down (behind the folder and
-                 cards) and centred vertically. -->
             <g transform="translate(55 21)">
               <rect x="14" y="18" width="226" height="150" rx="10" fill="#ececec" stroke="#ddd" stroke-width="2"/>
               <rect x="26" y="30" width="202" height="126" rx="3" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
@@ -340,15 +258,12 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
               <rect x="112" y="172" width="30" height="4" rx="2" fill="#ddd"/>
 
               <g clip-path="url(#icon3-screen-clip)">
-                <!-- Left nav. -->
                 <rect x="26" y="30" width="40" height="126" fill="#f2f2f2"/>
                 <rect x="34" y="42" width="24" height="5" rx="2" fill="var(--brand-green)"/>
                 <rect x="34" y="54" width="24" height="5" rx="2" fill="#ddd"/>
                 <rect x="34" y="66" width="24" height="5" rx="2" fill="#ddd"/>
                 <rect x="34" y="78" width="24" height="5" rx="2" fill="#ddd"/>
 
-                <!-- Course cards, 25% bigger, vertically centred on
-                     the screen. -->
                 <rect x="76" y="53" width="40" height="80" rx="4" fill="#fff" stroke="#ddd" stroke-width="1.2"/>
                 <line x1="81" y1="66" x2="111" y2="66" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
                 <line x1="81" y1="76" x2="101" y2="76" stroke="#e5e5e5" stroke-width="1.5" stroke-linecap="round"/>
@@ -363,7 +278,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
               </g>
             </g>
 
-            <!-- Folder + cards, same technique as icon 2. -->
             <rect x="299" y="46" width="64" height="129" rx="7" fill="#fff" stroke="#ddd" stroke-width="2.3" transform="rotate(11 331 111)"/>
             <rect x="286" y="51" width="64" height="129" rx="7" fill="#fff" stroke="#ddd" stroke-width="2.3" transform="rotate(6 318 115)"/>
             <rect x="272" y="56" width="64" height="129" rx="7" fill="var(--brand-green)" stroke="none"/>
@@ -385,13 +299,9 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
     <div class="feature-grid-2">
       <div class="feature-item">
         <div class="feature-item-art">
-          <!-- The same laptop-and-course-viewer construction as the
-               "Blend the physical and the digital" icon above. -->
           <svg viewBox="0 0 400 240">
             <rect width="400" height="240" fill="#f6f6f6"/>
 
-            <!-- Scaled down around the icon's centre for more padding
-                 around the laptop. -->
             <g transform="translate(200 120) scale(0.82) translate(-200 -120)">
               <rect x="20" y="20" width="360" height="196" rx="10" fill="#ececec" stroke="#ddd" stroke-width="2"/>
               <rect x="30" y="30" width="340" height="180" rx="6" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
@@ -411,10 +321,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
               <line x1="208" y1="72" x2="248" y2="72" stroke="#ddd" stroke-width="3"/>
               <line x1="208" y1="86" x2="232" y2="86" stroke="#e5e5e5" stroke-width="2"/>
 
-              <!-- Adding a block: a "+" affordance below the card's
-                   existing content opens a small block-type picker
-                   beneath it, echoing course-builder's own add-block
-                   toolbar. -->
               <circle cx="232" cy="104" r="8" fill="var(--brand-green)"/>
               <line x1="226" y1="104" x2="238" y2="104" stroke="#fff" stroke-width="2"/>
               <line x1="232" y1="98" x2="232" y2="110" stroke="#fff" stroke-width="2"/>
@@ -439,15 +345,10 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
 
       <div class="feature-item">
         <div class="feature-item-art">
-          <!-- A landscape A4 sheet, two cards printed 2-up (course-
-               builder's print output) — then, to its right, the
-               course cover and cards, same fanned technique as icon 2
-               above, as if freshly cut from that sheet. -->
           <svg viewBox="0 0 400 240">
             <rect width="400" height="240" fill="#f6f6f6"/>
 
             <rect x="20" y="49" width="200" height="142" rx="4" fill="#fff" stroke="#ddd" stroke-width="2"/>
-            <!-- Folded corner, tucked inward. -->
             <path d="M196 49 L196 73 L220 73 Z" fill="#e5e5e5" stroke="#ddd" stroke-width="1"/>
             <line x1="196" y1="49" x2="220" y2="73" stroke="#ccc" stroke-width="1"/>
 
@@ -474,9 +375,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
     </div>
 
     <div class="feature-grid-9">
-      <!-- 1. A lesson is a set of cards — three overlapping card
-           silhouettes, echoing .hero-card-back/.hero-card's own fanned
-           stack above. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -491,8 +389,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>Every lesson is a numbered sequence of cards that guide the lesson, like a real workbook.</p>
       </div>
 
-      <!-- 2. Print-accurate preview — a card outline over its own dot
-           grid, same language as .card-grid in course-builder. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -513,8 +409,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
           grid so you can focus on learning blocks.</p>
       </div>
 
-      <!-- 3. Sized to fit a pocket — a card silhouette with the real
-           header/punch/footer structure, at icon scale. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -529,9 +423,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
           carry.</p>
       </div>
 
-      <!-- 4. 11 ways to ask something — a small collage of real block
-           icon glyphs, straight from BLOCK_TYPES in
-           src/course-builder/js/block-types.js. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -561,8 +452,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>Add blocks of text, tasks, links, images, reflections, key ideas, matrix and list activities, and more.</p>
       </div>
 
-      <!-- 5. A cover worth keeping — mini recreation of the front cover:
-           info panel + brand mark, same as .hero-cover-front above. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -575,8 +464,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>Design a beautiful front cover folder for the course cards. One worth sending to the printers.</p>
       </div>
 
-      <!-- 6. Scan straight to the source — same wireframe QR language as
-           .hero-cover-front / .hero-card-wire-qr above. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -600,8 +487,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>Paste in a link and a QR code is generated for you, as well as a simple typeable URL.</p>
       </div>
 
-      <!-- 7. One source, two formats — a card silhouette feeding into a
-           browser-window glyph. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -616,9 +501,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>The Pockit Course Viewer can make your courses available to your students online too.</p>
       </div>
 
-      <!-- 8. Lesson planner built in — a small calendar, echoing the
-           real Timetabled Classes panel (#timetable-list in
-           src/course-builder/index.html / course-builder.js). -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
@@ -634,8 +516,6 @@ description: "Write your course once — print it as pocket-sized lesson cards, 
         <p>Slide across a scratchpad with your weekly timetable on it to map out the weel's learning.</p>
       </div>
 
-      <!-- 9. Your data, your call — folder / browser / cloud, the three
-           storage adapters course-builder supports. -->
       <div class="feature-card">
         <div class="feature-icon">
           <svg viewBox="0 0 40 40">
