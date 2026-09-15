@@ -653,7 +653,11 @@ body.course {
    pinned layer that needs to fill exactly the sticky viewport slot. */
 .hp-better-track {
   position: relative;
-  height: 300vh;
+  /* How much scroll it takes to step through all the slides — smaller
+     means less scrolling required per slide. See src/js/custom.js,
+     which divides (this height minus the sticky slot's height) evenly
+     across the slide count. */
+  height: 210vh;
 }
 
 .hp-better-sticky {

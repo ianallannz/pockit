@@ -467,51 +467,6 @@ document.addEventListener('fullscreenchange', () => {
 
 document.getElementById('print-btn').addEventListener('click', () => window.print());
 
-// Two-finger trackpad scroll — indistinguishable at the DOM level from a
-// plain mouse wheel, so this responds to either — switches lessons up/down,
-// leaving horizontal scroll to move between cards as it already does. Same
-// shape as course-builder.js's own version, just reading this page's own
-// activeCourseObj()/activeLessonId instead of module-level lessons/
-// activeLessonId, and with no drag-in-progress guard (nothing here is ever
-// draggable — see render-card.js's own header comment on interactive:
-// false). One gesture fires many small wheel events rather than one, so
-// deltaY accumulates until it crosses a threshold before acting; a short
-// cooldown after that stops the rest of the same swipe from flying through
-// several lessons at once. No wrap at the first/last lesson — it just
-// stops there.
-let lessonScrollAccum = 0;
-let lessonScrollLastTime = 0;
-let lessonScrollCooldownUntil = 0;
-const LESSON_SCROLL_THRESHOLD = 120;
-const LESSON_SCROLL_COOLDOWN_MS = 500;
-// Gap after which a new vertical wheel tick counts as a fresh gesture rather
-// than a continuation of the last one's leftover accumulation.
-const LESSON_SCROLL_GESTURE_GAP_MS = 150;
-
-document.getElementById('workspace').addEventListener('wheel', event => {
-  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-  event.preventDefault();
-
-  const now = Date.now();
-  if (now < lessonScrollCooldownUntil) return;
-
-  if (now - lessonScrollLastTime > LESSON_SCROLL_GESTURE_GAP_MS) lessonScrollAccum = 0;
-  lessonScrollLastTime = now;
-  lessonScrollAccum += event.deltaY;
-  if (Math.abs(lessonScrollAccum) < LESSON_SCROLL_THRESHOLD) return;
-
-  const direction = lessonScrollAccum > 0 ? 1 : -1;
-  lessonScrollAccum = 0;
-
-  const lessons = activeCourseObj()?.lessons || [];
-  const index = lessons.findIndex(l => l.id === activeLessonId);
-  const next = lessons[index + direction];
-  if (!next) return;
-
-  switchLesson(next.id);
-  lessonScrollCooldownUntil = now + LESSON_SCROLL_COOLDOWN_MS;
-}, { passive: false });
-
 // ── Init ─────────────────────────────────────────────────────
 if (!isSupabaseConfigured) {
   document.getElementById('viewSignInStatus').textContent = 'Online sync coming soon.';
