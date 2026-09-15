@@ -2916,12 +2916,14 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 /* ── Terms of Use ──
    A proper centred, scrollable modal (not an anchored popover like
    #add-course-dialog above it) — the content's too long for that, and
-   it can be opened from on top of #add-course-dialog itself, so its
-   z-index sits above every other dialog/popover in the app. */
+   it can be opened from on top of #add-course-dialog itself, or from
+   #first-run-gate (2000) before any course exists yet, so its z-index
+   sits above every other dialog/popover/overlay in the app, including
+   #first-run-gate and #app-loading (2100). */
 #terms-dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 2200;
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
@@ -2933,7 +2935,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 
 #terms-dialog {
   position: relative;
-  z-index: 31;
+  z-index: 2201;
   width: 100%;
   max-width: 560px;
   max-height: 85vh;
