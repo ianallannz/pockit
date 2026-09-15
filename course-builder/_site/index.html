@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pockit Course Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- Inter's weight list here is every font-weight this stylesheet ever
+       sets on it (300/400/600/700/800) — without :wght@, Google's css2
+       endpoint serves only 400, and every other weight already in use
+       would've been the browser's own faux bold rather than a real one. -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono&family=Manrope:wght@400;500;600;700;800&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/print.css" media="print">
+</head>
+<body>
+
+<!-- Floating "island", independent of #sidebar/#workspace (position: fixed
+     — DOM position doesn't matter, placed first for tab order) so it stays
+     put regardless of sidebar scroll. Always shown regardless of local vs.
+     cloud use — see openProfilePanel()/updateAccountStatus()/
+     updateStorageOptions()/updateProfileDetails() in course-builder.js for
+     what's inside #profile-panel below. The placeholder icon is swapped
+     for the real photo once uploaded — see updateProfileDetails(). -->
+<button id="profile-btn" type="button" title="Account &amp; storage">
+  <img id="profile-btn-avatar" alt="" hidden>
+  <svg id="profile-btn-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="8.5" r="3.5"/>
+    <path d="M5 20c0-3.6 3.13-6.5 7-6.5s7 2.9 7 6.5"/>
+  </svg>
+</button>
+
+<!-- ── Sidebar ── -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div id="brand">
+      <img src="images/pockit-logo.png" alt="" id="brand-logo">
+      <div id="brand-text">
+        <h1>Course Builder</h1>
+        <p>80mm × 160mm · 4mm grid</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="param-group no-collapse" id="course-group">
+    <h2>
+      Course
+      <span class="header-actions">
+        <button id="add-course-btn" type="button" class="header-btn" title="New course">+</button>
+        <button id="course-cover-btn" type="button" class="header-btn" title="Course Cover">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6c2-1.3 5-1.3 8 0.5 3-1.8 6-1.8 8-0.5v12c-2-1.3-5-1.3-8-0.5-3-0.8-6-0.8-8 0.5z"/>
+            <path d="M12 6.5v12"/>
+          </svg>
+        </button>
+        <!-- Cloud-only (see openSharePanel()'s cloud gate in
+             course-builder.js) but shown regardless of storage backend, same
+             as the vault row in #storage-options is shown but feature-gated
+             rather than hidden — the icon's presence doesn't silently change
+             shape depending on setup. -->
+        <button id="course-share-btn" type="button" class="header-btn" title="Share this course">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="6" cy="12" r="2.5"/>
+            <circle cx="18" cy="6" r="2.5"/>
+            <circle cx="18" cy="18" r="2.5"/>
+            <path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/>
+          </svg>
+        </button>
+        <button id="course-settings-toggle" type="button" class="header-btn" title="Course Settings">⚙</button>
+      </span>
+    </h2>
+    <div class="param-row">
+      <select id="courseSelect"></select>
+    </div>
+  </div>
+
+  <div class="param-group no-collapse" id="lesson-group">
+    <h2>Lessons</h2>
+    <div id="lesson-list"></div>
+    <button id="add-lesson-btn" type="button">+ New Lesson</button>
+  </div>
+
+  <!-- Toggled from #course-settings-toggle up by the course selector, not
+       from anything in here — see its click handler. -->
+  <div class="settings-group" id="settings-group" hidden>
+    <h2>Course Settings</h2>
+    <div id="settings-body">
+      <div class="settings-subsection">
+        <h3>Course Identity</h3>
+        <div class="param-row">
+          <label for="courseCode">Course Code</label>
+          <input type="text" id="courseCode" value="" placeholder="e.g. BUS5101">
+        </div>
+        <div class="param-row">
+          <label for="courseName">Course Name</label>
+          <input type="text" id="courseName" value="" placeholder="e.g. Business Functions">
+        </div>
+      </div>
+
+      <div class="settings-subsection">
+        <h3>Timetabled Classes</h3>
+        <div id="timetable-list"></div>
+        <button id="add-timetable-btn" type="button">+ Add Timetabled Class</button>
+      </div>
+
+      <div class="settings-subsection">
+        <h3>Card Grid</h3>
+        <div class="param-row">
+          <label for="gridSize">Grid Size: <span id="gridSizeDisplay">4</span>mm</label>
+          <input type="range" id="gridSize" value="4" min="2" max="8" step="1">
+        </div>
+        <div class="param-row">
+          <label for="cardWidth">Card Width: <span id="cardWidthDisplay">80</span>mm</label>
+          <input type="range" id="cardWidth" value="80">
+        </div>
+        <div class="param-row">
+          <label for="cardHeight">Card Height: <span id="cardHeightDisplay">160</span>mm</label>
+          <input type="range" id="cardHeight" value="160">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="dots" checked>
+          <label for="dots">Show Grid Dots</label>
+        </div>
+        <div class="param-row">
+          <label for="dotSize">Dot Size (mm)</label>
+          <input type="number" id="dotSize" value="0.4" min="0.05" max="2" step="0.05">
+        </div>
+        <div class="param-row">
+          <label for="dotColor">Dot Colour</label>
+          <input type="color" id="dotColor" value="#cccccc">
+        </div>
+      </div>
+
+      <div class="settings-subsection">
+        <h3>Card Features</h3>
+        <div class="param-row inline">
+          <input type="checkbox" id="header" checked>
+          <label for="header">Header</label>
+        </div>
+        <div class="param-row">
+          <label for="headerHeight">Header Height (mm)</label>
+          <input type="number" id="headerHeight" value="8" min="0" max="40" step="1">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="headerLine" checked>
+          <label for="headerLine">Header Line</label>
+        </div>
+        <div class="param-row">
+          <label for="headerLineColor">Header Line Colour</label>
+          <input type="color" id="headerLineColor" value="#dedede">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="punchMark" checked>
+          <label for="punchMark">Hole Punch Mark</label>
+        </div>
+        <div class="param-row">
+          <label for="punchColor">Hole Punch Colour</label>
+          <input type="color" id="punchColor" value="#00BB27">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="lessonCount" checked>
+          <label for="lessonCount">Lesson Card Count</label>
+        </div>
+        <div class="param-row">
+          <label for="lessonCountColor">Lesson Card Count Colour</label>
+          <input type="color" id="lessonCountColor" value="#999999">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="footer" checked>
+          <label for="footer">Footer</label>
+        </div>
+        <div class="param-row">
+          <label for="footerHeight">Footer Height (mm)</label>
+          <input type="number" id="footerHeight" value="12" min="0" max="40" step="1">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="footerLine" checked>
+          <label for="footerLine">Footer Line</label>
+        </div>
+        <div class="param-row">
+          <label for="footerLineColor">Footer Line Colour</label>
+          <input type="color" id="footerLineColor" value="#dedede">
+        </div>
+        <div class="param-row">
+          <label for="footerTextColor">Footer Text Colour</label>
+          <input type="color" id="footerTextColor" value="#999999">
+        </div>
+        <div class="param-row inline">
+          <input type="checkbox" id="cardNumbers" checked>
+          <label for="cardNumbers">Card Numbers</label>
+        </div>
+        <div class="param-row">
+          <label for="cardNumberColor">Card Number Colour</label>
+          <input type="color" id="cardNumberColor" value="#999999">
+        </div>
+      </div>
+
+      <div class="settings-subsection">
+        <h3>Card Outline</h3>
+        <div class="param-row inline">
+          <input type="checkbox" id="cardOutline" checked>
+          <label for="cardOutline">Show Outline</label>
+        </div>
+        <div class="param-row">
+          <label for="cardOutlineColor">Outline Colour</label>
+          <input type="color" id="cardOutlineColor" value="#222222">
+        </div>
+        <div class="param-row">
+          <label for="cardOutlineWeight">Outline Weight (mm)</label>
+          <input type="number" id="cardOutlineWeight" value="0.2" min="0.05" max="1" step="0.05">
+        </div>
+      </div>
+
+      <button id="reset-settings-btn" type="button">Reset Settings</button>
+      <button id="delete-course-btn" type="button">Delete Course</button>
+    </div>
+  </div>
+
+  <!-- Same "own panel, pinned above what follows" shape as #print-panel-group
+       below — margin-top: auto lives here now (on whichever one of the two
+       comes first) instead, so this and #print-panel-group stack together
+       at the sidebar's bottom edge rather than drifting apart. No options
+       panel of its own (nothing to configure yet), just the one button —
+       see #present-btn's click handler in course-builder.js. -->
+  <div id="present-panel-group">
+    <div id="present-actions">
+      <button id="present-btn" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/>
+        </svg>
+        <span>Lesson Presentation</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Always shown: printing works in any browser, not just ones with the
+       File System Access API. -->
+  <div id="print-panel-group">
+    <!-- #print-actions comes first — it's the fixed reference point ("the
+         top of the panel"): opening #print-panel below it grows the whole
+         pinned-to-bottom group, which reads as this row rising up with
+         the newly revealed options appearing underneath it. -->
+    <div id="print-actions">
+      <button id="print-btn" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 8V4h10v4"/>
+          <rect x="4" y="8" width="16" height="8" rx="1"/>
+          <rect x="7" y="13" width="10" height="7" rx="0.5"/>
+        </svg>
+        <span>Print</span>
+      </button>
+      <button id="print-panel-toggle" type="button" class="header-btn" title="Print options">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Revealed from #print-panel-toggle above — see openPrintPanel()/
+         closePrintPanel(). "Lesson" is a select-all/none over the card
+         list beneath it (checked/indeterminate/unchecked, same idea as
+         Excel's filter-list "(Select All)"); "Course" is mutually
+         exclusive with both — see buildPrintCardList() and the
+         printModeLesson/printModeCourse change handlers. -->
+    <div id="print-panel">
+      <label class="print-option-row">
+        <input type="checkbox" id="printModeLesson" checked>
+        <span>Lesson</span>
+      </label>
+      <div id="print-card-list"></div>
+      <label class="print-option-row">
+        <input type="checkbox" id="printModeCourse">
+        <span>Course</span>
+      </label>
+      <!-- Exclusive with Lesson/Course above, same as they are with each
+           other — see buildPrintCoverPage()/the printModeCover change
+           handler. Its own single page, at true size, rather than the
+           card layout the other two modes produce. -->
+      <label class="print-option-row">
+        <input type="checkbox" id="printModeCover">
+        <span>Cover</span>
+      </label>
+      <!-- Applies to either card mode above — one blank grid card per real
+           card, immediately after each real page, for double-sided
+           printing (see buildBlankCard()/buildPrintPages()). Never
+           applicable to Cover (there's no "blank grid" equivalent for a
+           cover), so it's hidden rather than just disabled while that
+           mode's selected — see the printModeCover change handler. -->
+      <label class="print-option-row" id="print-blank-overleaf-row">
+        <input type="checkbox" id="printBlankOverleaf">
+        <span>Blank grids overleaf</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Print is the last item now that account/storage status has moved to
+       #profile-panel (see below, opened from #profile-btn) — course-
+       related controls stay in the left nav; account-related ones don't.
+       margin-top: auto still lives on #present-panel-group above, pinning
+       this and it together to the sidebar's bottom edge. -->
+</div>
+
+<!-- ── Workspace ── -->
+<div id="workspace">
+  <div id="workspace-inner">
+    <div id="lesson-title-row">
+      <button id="scratchpad-toggle" type="button" title="Lesson Planner">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/>
+        </svg>
+      </button>
+      <span id="lesson-title-mark"></span>
+      <input type="text" id="workspaceLessonTitle" value="Untitled lesson">
+    </div>
+    <div id="card-row">
+      <div id="scratchpad-panel">
+        <div id="scratchpad-guides"></div>
+        <div id="scratchpad-notes"></div>
+      </div>
+      <div id="card-strip"></div>
+
+      <!-- Absolutely positioned against #card-row, but *not* simply
+           bottom: 0 — #scratchpad-panel here is a fixed height taller than
+           #card-strip, so #card-row's own bottom edge sits well below the
+           card-label captions rather than level with them. Its `bottom`
+           is instead set in JS (see positionTeacherOverviewToggle(), run
+           after every render()) to center this on a card-label caption's
+           own middle. left: 0 still lines up with #scratchpad-toggle
+           above. See the teacherOverviewOpen toggle handler and
+           buildTeacherOverviewBox() in course-builder.js. Toggled off by
+           openCoverView() alongside #lesson-title-row/#card-row. -->
+      <button id="teacher-overview-toggle" type="button" title="Lesson Presentation Slides">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="12" rx="1"/>
+          <path d="M8 20h8M12 16v4"/>
+          <path d="M6.5 13l3-3.5 2.5 2 4.5-5"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Toggled from #course-cover-btn — see openCoverView()/
+         closeCoverView(). Laid out flat like an unfolded folder: back
+         cover, spine, front cover, left to right — see renderCoverView()
+         for how #cover-back/#cover-spine/#cover-front get sized from
+         params.cardWidth/cardHeight/spineWidth. -->
+    <div id="cover-view" hidden>
+      <div id="cover-title-row">
+        <h2>Course Cover</h2>
+      </div>
+
+      <!-- Populated by buildCoverFillRow()/updateCoverModeUI() — see
+           renderCoverView() for how a mode/target's params.cover* fields
+           actually paint the panels. "Whole Cover" is one image or color
+           spanning the flat spread with no seam at the spine folds; "Per
+           Side" gives back/spine/front each their own independent fill. -->
+      <div id="cover-controls">
+        <div class="param-row inline">
+          <label>Design</label>
+          <div id="coverMode" class="segmented">
+            <button type="button" data-value="whole">Whole Cover</button>
+            <button type="button" data-value="perSide">Per Side</button>
+          </div>
+          <input type="checkbox" id="coverBackTextEnabled" class="cover-control-group" checked>
+          <label for="coverBackTextEnabled">Back Cover Text</label>
+          <label for="spineWidth" class="cover-control-group">Spine (mm)</label>
+          <input type="number" id="spineWidth" value="7" min="1" max="100" step="0.5">
+        </div>
+        <div id="cover-fill-whole" class="cover-fill-list"></div>
+        <div id="cover-fill-perside" class="cover-fill-list" hidden></div>
+      </div>
+
+      <div id="cover-spread">
+        <div id="cover-back" class="cover-panel">
+          <span class="cover-panel-label">Back</span>
+          <div id="cover-back-text">
+            <button type="button" id="cover-back-text-align" class="cover-text-align-btn"></button>
+            <div id="cover-back-preview" class="cover-text-preview" tabindex="0"></div>
+            <textarea id="cover-back-editor" class="cover-text-editor" spellcheck="false" hidden></textarea>
+            <div id="cover-back-resize" class="cover-text-resize" title="Drag to resize"></div>
+          </div>
+        </div>
+        <div id="cover-spine" class="cover-panel">
+          <span class="cover-panel-label">Spine</span>
+          <div id="cover-spine-info"><span id="cover-spine-code"></span> · <span id="cover-spine-title"></span></div>
+        </div>
+        <div id="cover-front" class="cover-panel">
+          <span class="cover-panel-label">Front</span>
+          <div id="cover-front-info">
+            <div id="cover-front-code"></div>
+            <div id="cover-front-title"></div>
+            <!-- From the Profile panel's name/title/job/employer fields —
+                 see renderCoverView(). Hidden outright when none of them
+                 are set, so an unfilled-in profile leaves nothing behind. -->
+            <div id="cover-front-person" hidden>
+              <div id="cover-front-person-name"></div>
+              <div id="cover-front-person-role"></div>
+            </div>
+          </div>
+          <div id="cover-front-mark"></div>
+          <!-- Blank space for the recipient's own name/contact details,
+               handwritten — not editable/generated content like
+               #cover-front-info above, just a fixed prompt label. Sized/
+               positioned in renderCoverView(). -->
+          <div id="cover-front-contact"><span>Name / Contact</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Populated just before printing (see buildPrintPages(), hooked to
+         window's beforeprint) with clones of the active lesson's cards,
+         grouped 3-per-page — see css/print.css. Stays inside
+         #workspace-inner (rather than sitting at the top level) so it
+         inherits --punch-color/--task-tint, both set there. -->
+    <div id="print-root"></div>
+  </div>
+</div>
+
+<!-- ── Add course ── -->
+<div id="add-course-dialog-backdrop" hidden></div>
+<div id="add-course-dialog" hidden role="dialog" aria-modal="true" aria-label="New course">
+  <h2>New Course</h2>
+  <div class="param-row">
+    <label for="newCourseCode">Course Code</label>
+    <input type="text" id="newCourseCode" placeholder="Enter course code">
+  </div>
+  <div class="param-row">
+    <label for="newCourseName">Course Name</label>
+    <input type="text" id="newCourseName" placeholder="Enter course name">
+  </div>
+  <div id="add-course-dialog-footer">
+    <button id="addCourseCancel" type="button">Cancel</button>
+    <button id="addCourseOk" type="button">OK</button>
+  </div>
+</div>
+
+<!-- ── Sign in ── -->
+<!-- Same backdrop+dialog+footer shape as #add-course-dialog above. Magic
+     link, not a password field — see auth.js's signInWithEmail(). Opened
+     from #account-status-action; see openSignInDialog() in
+     course-builder.js. -->
+<div id="sign-in-dialog-backdrop" hidden></div>
+<div id="sign-in-dialog" hidden role="dialog" aria-modal="true" aria-label="Sign in">
+  <h2>Sign in</h2>
+  <div class="param-row">
+    <label for="signInEmail">Email</label>
+    <input type="email" id="signInEmail" placeholder="you@example.com">
+  </div>
+  <p id="signInStatus"></p>
+  <div id="sign-in-dialog-footer">
+    <button id="signInCancel" type="button">Cancel</button>
+    <button id="signInSend" type="button">Send link</button>
+  </div>
+</div>
+
+<!-- ── Profile panel ── -->
+<!-- Same transparent-backdrop+floating-panel shape as the dialogs above,
+     opened from #profile-btn (see openProfilePanel() in course-builder.js)
+     rather than from a sidebar row — everything account/storage-related
+     now lives here instead of pinned to the bottom of the left nav. -->
+<div id="profile-panel-backdrop" hidden></div>
+<div id="profile-panel" hidden role="dialog" aria-modal="true" aria-label="Account and storage">
+  <!-- Always available, no sign-in required — title/name/job/employer are
+       plain saved data, same as any course param (see the `profile` state
+       in course-builder.js). Only the photo picker is feature-detected
+       (activeAdapter.avatar, disabled on plain local storage — nowhere to
+       put a photo there) rather than gated by identity — see
+       updateProfileDetails(). -->
+  <div id="profile-details">
+    <div id="profile-avatar-row">
+      <button id="profile-avatar-btn" type="button" title="Change photo…">
+        <img id="profile-avatar-img" alt="" hidden>
+        <svg id="profile-avatar-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8.5" r="3.5"/>
+          <path d="M5 20c0-3.6 3.13-6.5 7-6.5s7 2.9 7 6.5"/>
+        </svg>
+      </button>
+      <input type="file" id="profileAvatarPicker" accept="image/png,image/jpeg,image/webp" hidden>
+      <span id="profile-avatar-note">Change photo…</span>
+    </div>
+    <div id="profile-name-row">
+      <div class="param-row" id="profile-title-field">
+        <label for="profileTitle">Title</label>
+        <select id="profileTitle">
+          <option value=""></option>
+          <option>Mr</option>
+          <option>Mrs</option>
+          <option>Ms</option>
+          <option>Mx</option>
+          <option>Dr</option>
+          <option>Prof</option>
+        </select>
+      </div>
+      <div class="param-row">
+        <label for="profileFirstName">First name</label>
+        <input type="text" id="profileFirstName">
+      </div>
+      <div class="param-row">
+        <label for="profileLastName">Last name</label>
+        <input type="text" id="profileLastName">
+      </div>
+    </div>
+    <div class="param-row">
+      <label for="profileJobTitle">Job title</label>
+      <input type="text" id="profileJobTitle" placeholder="e.g. Senior Lecturer">
+    </div>
+    <div class="param-row">
+      <label for="profileEmployer">Employer</label>
+      <input type="text" id="profileEmployer">
+    </div>
+  </div>
+
+  <!-- One place for all three storage backends, radio-select rather than
+       three separate ad-hoc controls that had built up one feature at a
+       time — see updateStorageOptions()/switchStorageMode() in
+       course-builder.js. Clicking a row (even the already-active one)
+       re-runs that mode's setup, which doubles as "change folder" for the
+       vault row once already connected. -->
+  <div id="storage-options">
+    <h2>Storage options</h2>
+    <label class="storage-option-row">
+      <input type="radio" name="storageMode" id="storageModeLocal">
+      <span class="storage-option-text">
+        <strong>This browser only</strong>
+        <small>Works offline. Course data never leaves this browser.</small>
+      </span>
+    </label>
+    <!-- Hidden outright on browsers without the File System Access API. -->
+    <label class="storage-option-row" id="storageModeVaultRow">
+      <input type="radio" name="storageMode" id="storageModeVault">
+      <span class="storage-option-text">
+        <strong>A folder on this computer</strong>
+        <small id="storageModeVaultDetail">Real files you choose where to save.</small>
+      </span>
+    </label>
+    <label class="storage-option-row">
+      <input type="radio" name="storageMode" id="storageModeCloud">
+      <span class="storage-option-text">
+        <strong>Cloud</strong>
+        <small id="storageModeCloudDetail">Sync course data across your devices.</small>
+      </span>
+    </label>
+  </div>
+
+  <!-- Identity only — always shown (unlike #storage-options' vault row,
+       sign-in has no browser-support gap to feature-detect around, just a
+       "not configured yet" state while no Supabase project exists — see
+       supabase-config.js). See updateAccountStatus() in course-builder.js. -->
+  <div id="account-status">
+    <p id="account-status-label"></p>
+    <button id="account-status-action" type="button"></button>
+  </div>
+</div>
+
+<!-- ── Share panel ── -->
+<!-- Per-course read-only viewer access, opened from #course-share-btn —
+     same floating-popover shape as #profile-panel above (transparent
+     backdrop, anchored, non-modal in spirit), just anchored to a different
+     button. Cloud-only by construction (see the plan's scope boundary): a
+     local/vault-only course has no shared backend to grant access
+     against, so openSharePanel()/renderShareAccessList() in
+     course-builder.js show #share-cloud-gate instead of #share-body for
+     any other storage backend, rather than a share attempt that can't
+     actually work. -->
+<div id="share-panel-backdrop" hidden></div>
+<div id="share-panel" hidden role="dialog" aria-modal="true" aria-label="Share this course">
+  <h2>Share</h2>
+  <p id="share-cloud-gate" hidden>Switch to Cloud storage (Account &amp; storage) to share this course.</p>
+  <div id="share-body">
+    <!-- Populated by renderShareAccessList() — one row per invite, pending
+         or accepted alike, each with its own revoke ×. Empty state (no one
+         invited yet, or a load error) is a row here too — see
+         buildShareEmptyRow(). -->
+    <div id="share-access-list"></div>
+
+    <div class="param-row">
+      <label for="shareInviteEmail">Invite viewer by email</label>
+      <input type="email" id="shareInviteEmail" placeholder="you@example.com">
+    </div>
+    <div class="param-row">
+      <!-- Free text, optional — see course_invites.invited_as in
+           schema.sql: a forward-looking hook (e.g. "student") not read or
+           acted on anywhere yet, kept here so the owner can note it now
+           without this panel needing to change later if that turns out to
+           matter. -->
+      <label for="shareInviteNote">Note (optional)</label>
+      <input type="text" id="shareInviteNote" placeholder="e.g. student">
+    </div>
+    <!-- Cancel closes the whole panel (same as clicking the backdrop),
+         same as every other Cancel here — see closeSharePanel(). -->
+    <div id="share-invite-footer">
+      <p id="shareInviteStatus"></p>
+      <button id="shareInviteCancel" type="button">Cancel</button>
+      <button id="shareInviteBtn" type="button">Invite</button>
+    </div>
+
+    <!-- No invite needed — the owner already owns the course. Opens the
+         viewer scoped to (owner=self, course=current); see
+         course-builder.js's click handler. -->
+    <button id="share-preview-btn" type="button">Preview as viewer</button>
+  </div>
+</div>
+
+<!-- ── Content type picker ── -->
+<div id="type-picker-backdrop" hidden></div>
+<div id="type-picker" hidden role="dialog" aria-modal="true" aria-label="Choose a content type">
+  <h2>Add content</h2>
+  <div id="type-picker-options"></div>
+</div>
+
+<!-- ── Link editor ── -->
+<div id="link-editor-backdrop" hidden></div>
+<div id="link-editor" hidden role="dialog" aria-modal="true" aria-label="Edit link">
+  <h2>Link</h2>
+  <div class="param-row">
+    <label for="linkUrl">URL</label>
+    <div id="link-url-row">
+      <input type="url" id="linkUrl" placeholder="https://…" spellcheck="false">
+      <button id="linkFetch" type="button">Fetch</button>
+    </div>
+  </div>
+  <div class="param-row">
+    <label for="linkSlug">Short link (optional)</label>
+    <div id="link-slug-row">
+      <span id="link-slug-prefix">pockit.works/</span>
+      <input type="text" id="linkSlug" placeholder="e.g. figure3" spellcheck="false">
+    </div>
+  </div>
+  <div class="param-row">
+    <label for="linkTitle">Title</label>
+    <input type="text" id="linkTitle" placeholder="Page title">
+  </div>
+  <div class="param-row">
+    <label for="linkDescription">Description</label>
+    <textarea id="linkDescription" rows="3" placeholder="Short summary"></textarea>
+  </div>
+  <div id="link-editor-footer">
+    <p id="link-editor-note"></p>
+    <button id="linkCancel" type="button">Cancel</button>
+    <button id="linkDone" type="button">OK</button>
+  </div>
+</div>
+
+<!-- ── Image editor ── -->
+<div id="image-editor-backdrop" hidden></div>
+<div id="image-editor" hidden role="dialog" aria-modal="true" aria-label="Edit image">
+  <h2>Image</h2>
+  <div class="param-row">
+    <label>Fit</label>
+    <div id="imageFit" class="segmented">
+      <button type="button" data-fit="contain">Contain</button>
+      <button type="button" data-fit="cover">Cover</button>
+    </div>
+  </div>
+  <div class="param-row">
+    <label for="imageAlt">Alt text</label>
+    <textarea id="imageAlt" rows="3" placeholder="What the image shows"></textarea>
+  </div>
+  <div id="image-editor-footer">
+    <p id="image-editor-note">Described for the web version; not printed.</p>
+    <button id="imageCancel" type="button">Cancel</button>
+    <button id="imageDone" type="button">OK</button>
+  </div>
+</div>
+
+<!-- ── Present ──────────────────────────────────────────────────
+     Full-viewport (position: fixed, outside #workspace so its own
+     scroll/layout is irrelevant here), one slide per card in the active
+     lesson — see openPresentView()/renderPresentSlide() in
+     course-builder.js. Opened from #present-btn in the sidebar. -->
+<div id="present-view" hidden>
+  <button id="present-close" type="button" title="Close (Esc)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <button id="present-prev" type="button" title="Previous (←)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <button id="present-next" type="button" title="Next (→)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div id="present-slide">
+    <div id="present-header">
+      <div id="present-header-left">
+        <div id="present-mark"></div>
+        <div id="present-header-text">
+          <div id="present-lesson"></div>
+          <h1 id="present-title"></h1>
+        </div>
+      </div>
+      <div id="present-count"></div>
+    </div>
+    <div id="present-content"></div>
+    <div id="present-footer">
+      <span id="present-footer-text"></span>
+      <img id="present-logo" src="images/pockit-logo.png" alt="">
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirm dialog ── -->
+<div id="confirm-dialog-backdrop" hidden></div>
+<div id="confirm-dialog" hidden role="alertdialog" aria-modal="true" aria-label="Confirm">
+  <p id="confirm-dialog-message"></p>
+  <div id="confirm-dialog-footer">
+    <button id="confirmCancel" type="button">Cancel</button>
+    <button id="confirmOk" type="button">Delete</button>
+  </div>
+</div>
+
+<script src="vendor/qrcode.js"></script>
+<!-- card-format.js is one shared module, used unmodified by both the browser
+     and the Eleventy/Node build — this import map is what lets its plain
+     `import ... from 'js-yaml'` resolve here to the vendored copy, the same
+     specifier Node resolves via node_modules. -->
+<script type="importmap">
+  { "imports": {
+      "js-yaml": "./vendor/js-yaml.mjs",
+      "@supabase/supabase-js": "./vendor/supabase-js.mjs"
+  } }
+</script>
+<script type="module" src="js/course-builder.js"></script>
+</body>
+</html>
