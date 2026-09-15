@@ -526,7 +526,7 @@ body.course {
 .hp-hero-photo {
   position: absolute;
   inset: 0;
-  background-image: url("/images/hp-hero-bg01.jpg");
+  background-image: url("/images/hp-hero-bg04.jpg");
   background-size: cover;
   background-position: center;
 }
