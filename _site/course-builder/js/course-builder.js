@@ -1701,7 +1701,6 @@ function addCard() {
 
 function removeCard(id) {
   cards = cards.filter(card => card.id !== id);
-  if (cards.length === 0) cards.push({ id: nextId++, blocks: [] });
   activeLesson().cards = cards;
   save();
   render();
