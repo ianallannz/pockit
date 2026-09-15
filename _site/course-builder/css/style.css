@@ -4380,10 +4380,13 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   text-align: center;
 }
 
+#first-run-logo-link {
+  margin-bottom: 4px;
+}
+
 #first-run-logo {
   width: 40px;
   height: 40px;
-  margin-bottom: 4px;
 }
 
 #first-run-card h1 {
