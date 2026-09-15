@@ -44,7 +44,9 @@
 <div id="sidebar">
   <div id="sidebar-header">
     <div id="brand">
-      <img src="images/pockit-logo.png" alt="" id="brand-logo">
+      <a href="/" id="brand-logo-link" aria-label="Pockit home">
+        <img src="images/pockit-logo.png" alt="" id="brand-logo">
+      </a>
       <div id="brand-text">
         <h1>Course Builder</h1>
         <p>80mm × 160mm · 4mm grid</p>
@@ -98,12 +100,12 @@
       <div class="settings-subsection">
         <h3>Course Identity</h3>
         <div class="param-row">
-          <label for="courseCode">Course Code</label>
-          <input type="text" id="courseCode" value="" placeholder="e.g. BSNS5003">
-        </div>
-        <div class="param-row">
           <label for="courseName">Course Name</label>
           <input type="text" id="courseName" value="" placeholder="e.g. Business Functions">
+        </div>
+        <div class="param-row">
+          <label for="courseCode">Course Code</label>
+          <input type="text" id="courseCode" value="" placeholder="e.g. BSNS5003">
         </div>
       </div>
 
@@ -438,16 +440,74 @@
 <div id="add-course-dialog" hidden role="dialog" aria-modal="true" aria-label="New course">
   <h2>New Course</h2>
   <div class="param-row">
-    <label for="newCourseCode">Course Code</label>
-    <input type="text" id="newCourseCode" placeholder="Enter course code">
-  </div>
-  <div class="param-row">
     <label for="newCourseName">Course Name</label>
     <input type="text" id="newCourseName" placeholder="Enter course name">
+  </div>
+  <div class="param-row">
+    <label for="newCourseCode">Course Code</label>
+    <input type="text" id="newCourseCode" placeholder="Enter course code (optional)">
   </div>
   <div id="add-course-dialog-footer">
     <button id="addCourseCancel" type="button">Cancel</button>
     <button id="addCourseOk" type="button">OK</button>
+  </div>
+  <p class="terms-notice">By clicking OK you agree to the <a href="#" class="terms-link">Terms of Use</a>.</p>
+</div>
+
+<!-- ── Terms of Use ── -->
+<div id="terms-dialog-backdrop" hidden></div>
+<div id="terms-dialog" hidden role="dialog" aria-modal="true" aria-label="Terms of Use">
+  <div id="terms-dialog-header">
+    <h2>Terms of Use</h2>
+    <button id="terms-dialog-close" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div id="terms-dialog-body">
+    <p class="terms-updated">Last updated 16 September 2026</p>
+
+    <p>These Terms of Use ("Terms") govern your access to and use of Pockit Course Builder and related Pockit services (together, "Pockit," "we," "us"), operated by Ian Allan trading as Pockit. By creating an account, creating a course, or otherwise using Pockit, you agree to these Terms. If you don't agree, please don't use Pockit.</p>
+
+    <h3>1. Eligibility</h3>
+    <p>You must be at least 16 years old to create a Pockit account or course. If you're using Pockit on behalf of a school, employer, or other organisation, you confirm you have the authority to agree to these Terms on their behalf.</p>
+
+    <h3>2. Your Account</h3>
+    <p>You're responsible for keeping your account credentials secure and for all activity that happens under your account. Let us know promptly if you think your account has been compromised.</p>
+
+    <h3>3. Your Content</h3>
+    <p>You keep ownership of the courses, lesson cards, text, images, and other material you create or upload ("Your Content"). By creating or uploading Content, you grant Pockit a licence to store, display, and make it available as directed by you — including to anyone you choose to share a course with via Pockit's sharing features. This licence exists only so we can operate the service; it ends when you delete the relevant Content or your account, except where a copy reasonably persists in backups for a limited period, or where you've shared it and the recipient retains their own copy.</p>
+    <p>You're solely responsible for Your Content and for making sure you have the right to use anything you include in it.</p>
+
+    <h3>4. Content Standards</h3>
+    <p>When creating a course, you agree not to include:</p>
+    <ul>
+      <li><strong>Objectionable material</strong> — content that is unlawful, hateful, discriminatory, sexually explicit, graphically violent, harassing, or otherwise offensive or inappropriate, particularly given Pockit is commonly used in classroom and educational settings.</li>
+      <li><strong>Copyrighted material you don't have the right to use</strong> — this includes text, images, video, audio, or other third-party work reproduced without permission, a valid licence, or a clear, correct attribution/citation where that's the basis for use (e.g. quotation, fair dealing/fair use, or material you've properly licensed). If you're relying on an exception like fair dealing or fair use, you're responsible for making sure that's actually accurate — don't assume it applies.</li>
+      <li>Content that infringes someone else's intellectual property, privacy, or other legal rights.</li>
+      <li>Malware, spam, or anything intended to disrupt or gain unauthorised access to Pockit or other users' accounts.</li>
+    </ul>
+
+    <h3>5. No AI-Agent-Created Courses</h3>
+    <p>Pockit is for people creating their own courses, using the Pockit editor themselves. You may not use an AI agent, bot, script, or other automated tool to generate, populate, or bulk-create course content, or to otherwise interact with Pockit's editing features programmatically in place of a human user. This doesn't stop you personally using an AI tool as a writing aid before typing or pasting your own material in — what's not allowed is an autonomous agent operating Pockit, or generating substantial course content, on your behalf without a person actually doing the creating.</p>
+
+    <h3>6. Course Sharing</h3>
+    <p>Pockit lets you share a course with other people you invite by email. If you invite someone, you're responsible for making sure you have a legitimate basis to share that content with them. Recipients get read-only access to the course you've shared, until you revoke it.</p>
+
+    <h3>7. Enforcement</h3>
+    <p>If we reasonably believe a course or account breaches these Terms — including objectionable material, copyright infringement, or automated/AI-agent-created content — we may remove the offending content, and suspend or permanently remove the course or account, with or without prior notice, at our discretion. We'll try to notify you when practical, but serious or repeated breaches may be actioned immediately without warning.</p>
+
+    <h3>8. Service Availability</h3>
+    <p>Pockit is provided on an "as is" and "as available" basis. We may change, suspend, or discontinue any part of the service at any time. We'll try to give reasonable notice of anything that affects your access to your own content, but can't guarantee the service will always be available or error-free.</p>
+
+    <h3>9. Disclaimer &amp; Liability</h3>
+    <p>To the maximum extent permitted by law, Pockit is provided without warranties of any kind, and we're not liable for any indirect, incidental, or consequential loss arising from your use of the service. Nothing in these Terms limits any rights you have under the Consumer Guarantees Act 1993 or Fair Trading Act 1986 (NZ) that can't lawfully be excluded.</p>
+
+    <h3>10. Changes to These Terms</h3>
+    <p>We may update these Terms from time to time. If we make material changes, we'll take reasonable steps to let you know (such as an in-app notice) before they take effect. Continuing to use Pockit after changes take effect means you accept the updated Terms.</p>
+
+    <h3>11. Governing Law</h3>
+    <p>These Terms are governed by the laws of New Zealand, and any disputes will be subject to the exclusive jurisdiction of the New Zealand courts.</p>
+
+    <h3>12. Contact</h3>
+    <p>Questions, or want to report content that breaches these Terms? Email <a href="mailto:ian.allan.nz@gmail.com">ian.allan.nz@gmail.com</a>.</p>
   </div>
 </div>
 
@@ -762,14 +822,15 @@
     <h1>Welcome to Course Builder</h1>
     <p>Create your first course to get started.</p>
     <div class="param-row">
-      <label for="firstRunCourseCode">Course Code</label>
-      <input type="text" id="firstRunCourseCode" placeholder="e.g. BSNS5003">
-    </div>
-    <div class="param-row">
       <label for="firstRunCourseName">Course Name</label>
       <input type="text" id="firstRunCourseName" placeholder="e.g. Business Functions">
     </div>
+    <div class="param-row">
+      <label for="firstRunCourseCode">Course Code</label>
+      <input type="text" id="firstRunCourseCode" placeholder="e.g. BSNS5003 (optional)">
+    </div>
     <button id="firstRunCreateBtn" type="button">Create my first course</button>
+    <p class="terms-notice">By clicking Create my first course you agree to the <a href="#" class="terms-link">Terms of Use</a>.</p>
   </div>
 </div>
 

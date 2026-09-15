@@ -3329,9 +3329,9 @@ function updateFirstRunGate() {
     // were — this only ever runs right as the gate becomes visible again
     // (nothing else triggers a render while it's inert), so there's no
     // typed-text-in-progress to stomp on.
-    document.getElementById('firstRunCourseCode').value = '';
     document.getElementById('firstRunCourseName').value = '';
-    document.getElementById('firstRunCourseCode').focus();
+    document.getElementById('firstRunCourseCode').value = '';
+    document.getElementById('firstRunCourseName').focus();
   }
 }
 
@@ -3666,13 +3666,13 @@ function closeConfirmDialog(confirmed) {
 // blank (placeholders only) — unlike the link/image editors, there's no
 // existing course to prefill from, that's the point of asking.
 function openAddCourseDialog(anchor) {
-  document.getElementById('newCourseCode').value = '';
   document.getElementById('newCourseName').value = '';
+  document.getElementById('newCourseCode').value = '';
   document.getElementById('add-course-dialog-backdrop').hidden = false;
   const dialog = document.getElementById('add-course-dialog');
   dialog.hidden = false;
   positionPopover(dialog, anchor);
-  document.getElementById('newCourseCode').focus();
+  document.getElementById('newCourseName').focus();
 }
 
 // Backdrop and Cancel both back out with no course added — only an explicit
@@ -3758,6 +3758,32 @@ document.getElementById('add-course-btn').addEventListener('click', event => {
 document.getElementById('addCourseCancel').addEventListener('click', () => closeAddCourseDialog(false));
 document.getElementById('addCourseOk').addEventListener('click', () => closeAddCourseDialog(true));
 document.getElementById('add-course-dialog-backdrop').addEventListener('click', () => closeAddCourseDialog(false));
+
+// Terms of Use — opened from the .terms-link in either course-creation
+// entry point (the + button's dialog, and the first-run gate). Its own
+// backdrop/z-index sit above everything else, including #add-course-
+// dialog itself, so opening it from inside that dialog doesn't also
+// close the dialog underneath — only its own close button/backdrop/
+// Escape dismiss it.
+function openTermsDialog() {
+  document.getElementById('terms-dialog-backdrop').hidden = false;
+  document.getElementById('terms-dialog').hidden = false;
+}
+function closeTermsDialog() {
+  document.getElementById('terms-dialog-backdrop').hidden = true;
+  document.getElementById('terms-dialog').hidden = true;
+}
+document.querySelectorAll('.terms-link').forEach(link => {
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    openTermsDialog();
+  });
+});
+document.getElementById('terms-dialog-close').addEventListener('click', closeTermsDialog);
+document.getElementById('terms-dialog-backdrop').addEventListener('click', closeTermsDialog);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !document.getElementById('terms-dialog').hidden) closeTermsDialog();
+});
 // The gate's own course-creation button — separate from openAddCourseDialog/
 // closeAddCourseDialog above (different ids, always visible while the gate
 // is up rather than opened/closed), but calls the same addCourse(). The
@@ -3960,63 +3986,6 @@ for (const [target, type] of [[document.getElementById('workspace'), 'scroll'], 
     closeImageEditor();
   });
 }
-
-// Two-finger trackpad scroll — indistinguishable at the DOM level from a
-// plain mouse wheel, so this responds to either — switches lessons up/down,
-// leaving horizontal scroll to move between cards as it already does. One
-// gesture fires many small wheel events rather than one, so deltaY
-// accumulates until it crosses a threshold before acting; a short cooldown
-// after that stops the rest of the same swipe from flying through several
-// lessons at once. No wrap at the first/last lesson — it just stops there.
-//
-// Only hijacks the gesture when the workspace has nothing to scroll (see
-// the scrollHeight/clientHeight check below) — on a short viewport (a
-// small laptop screen, or a lesson with enough cards to run tall), a
-// lesson with actual vertical overflow needs that same gesture left alone
-// so the browser can scroll down to the rest of it instead. Gated on the
-// content's real overflow rather than a screen-size breakpoint, so it
-// keeps working correctly regardless of viewport, zoom, or how many cards
-// a lesson happens to have.
-let lessonScrollAccum = 0;
-let lessonScrollLastTime = 0;
-let lessonScrollCooldownUntil = 0;
-const LESSON_SCROLL_THRESHOLD = 120;
-const LESSON_SCROLL_COOLDOWN_MS = 500;
-// Gap after which a new vertical wheel tick counts as a fresh gesture rather
-// than a continuation of the last one's leftover accumulation.
-const LESSON_SCROLL_GESTURE_GAP_MS = 150;
-
-const workspaceEl = document.getElementById('workspace');
-
-workspaceEl.addEventListener('wheel', event => {
-  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-  // Switching lessons mid-drag would be disorienting — the dragged card/
-  // block would suddenly belong to a different lesson underneath the pointer.
-  if (dragBlockRef || dragLessonSrcIndex !== null) return;
-  // Something to scroll to (a tall lesson on a short viewport) — let the
-  // gesture through as a normal scroll instead of hijacking it.
-  if (workspaceEl.scrollHeight > workspaceEl.clientHeight) return;
-
-  event.preventDefault();
-
-  const now = Date.now();
-  if (now < lessonScrollCooldownUntil) return;
-
-  if (now - lessonScrollLastTime > LESSON_SCROLL_GESTURE_GAP_MS) lessonScrollAccum = 0;
-  lessonScrollLastTime = now;
-  lessonScrollAccum += event.deltaY;
-  if (Math.abs(lessonScrollAccum) < LESSON_SCROLL_THRESHOLD) return;
-
-  const direction = lessonScrollAccum > 0 ? 1 : -1;
-  lessonScrollAccum = 0;
-
-  const index = lessons.findIndex(l => l.id === activeLessonId);
-  const next = lessons[index + direction];
-  if (!next) return;
-
-  switchLesson(next.id);
-  lessonScrollCooldownUntil = now + LESSON_SCROLL_COOLDOWN_MS;
-}, { passive: false });
 
 // A file dropped anywhere but an image block would otherwise navigate the page
 // away to it.

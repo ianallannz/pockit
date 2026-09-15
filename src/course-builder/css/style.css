@@ -198,6 +198,11 @@ body.sidebar-open #sidebar-backdrop {
   gap: 10px;
 }
 
+#brand-logo-link {
+  display: flex;
+  flex-shrink: 0;
+}
+
 #brand-logo {
   width: 32px;
   height: 32px;
@@ -1112,8 +1117,14 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   overflow-x: scroll;
   overflow-y: auto;
   display: flex;
-  align-items: center;
-  padding: 48px;
+  /* "safe" falls back to flex-start once centering would overflow the
+     box — without it, a lesson tall enough to exceed a short viewport
+     centers past the top edge, pushing the lesson title above y: 0
+     with no way to scroll up to it (centering a too-big flex item
+     overflows equally both directions, and only the downward half is
+     ever reachable by scrolling). */
+  align-items: safe center;
+  padding: 16px 48px;
 }
 
 /* Left-aligned rather than centered horizontally (no more margin: auto) —
@@ -2887,6 +2898,124 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.terms-notice {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #888;
+  text-align: right;
+}
+
+.terms-link {
+  color: var(--brand-green);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Terms of Use ──
+   A proper centred, scrollable modal (not an anchored popover like
+   #add-course-dialog above it) — the content's too long for that, and
+   it can be opened from on top of #add-course-dialog itself, so its
+   z-index sits above every other dialog/popover in the app. */
+#terms-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+#terms-dialog-backdrop[hidden] { display: none; }
+
+#terms-dialog {
+  position: relative;
+  z-index: 31;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  margin: 24px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#terms-dialog[hidden] { display: none; }
+
+#terms-dialog-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+#terms-dialog-header h2 {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #111;
+}
+
+#terms-dialog-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #444;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+#terms-dialog-close:hover { color: #333; }
+
+#terms-dialog-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--value-color);
+}
+
+.terms-updated {
+  margin: 0 0 14px;
+  font-size: 10px;
+  color: #888;
+}
+
+#terms-dialog-body h3 {
+  margin: 18px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: #111;
+}
+
+#terms-dialog-body h3:first-of-type { margin-top: 0; }
+
+#terms-dialog-body p { margin: 0 0 10px; }
+
+#terms-dialog-body ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+#terms-dialog-body li { margin-bottom: 6px; }
+
+#terms-dialog-body a {
+  color: var(--brand-green);
 }
 
 #linkDone,
