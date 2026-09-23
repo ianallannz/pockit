@@ -2212,27 +2212,111 @@ function parseJinaResponse(text, sourceUrl) {
   // Split by double newlines to get paragraphs
   const paragraphs = cleaned.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
   
-  // Extract title and description from paragraphs
-  let title = paragraphs.length > 0 ? paragraphs[0].substring(0, 200) : '';
-  let description = paragraphs.length > 1 ? paragraphs[1].substring(0, 300) : '';
+  // Extract title from first paragraph (format: "Title: Actual Title Here")
+  let title = '';
+  if (paragraphs.length > 0) {
+    const firstPara = paragraphs[0];
+    if (firstPara.startsWith('Title: ')) {
+      title = firstPara.substring(7); // Remove "Title: " prefix
+    } else {
+      title = firstPara;
+    }
+    title = title.substring(0, 200); // Limit length
+  }
   
-  // Fallback: if paragraph approach didn't work well, use first few lines
+  // Extract description - look for actual content after headers
+  let description = '';
+  
+  // First, try to find content after "Markdown Content:" marker
+  let contentStartIndex = -1;
+  for (let i = 0; i < paragraphs.length; i++) {
+    if (paragraphs[i].startsWith('Markdown Content:')) {
+      contentStartIndex = i;
+      break;
+    }
+  }
+  
+  if (contentStartIndex !== -1) {
+    // Get the content from the same line after "Markdown Content:"
+    const contentLine = paragraphs[contentStartIndex];
+    const contentAfterMarker = contentLine.substring('Markdown Content:'.length).trim();
+    
+    if (contentAfterMarker) {
+      // We have content on the same line
+      description = contentAfterMarker.substring(0, 300);
+      
+      // If we need more content, add subsequent paragraphs
+      if (description.length < 100 && contentStartIndex + 1 < paragraphs.length) {
+        const additionalContent = paragraphs[contentStartIndex + 1].substring(0, 300 - description.length);
+        description += ' ' + additionalContent;
+      }
+    } else if (contentStartIndex + 1 < paragraphs.length) {
+      // Content is on the next line
+      description = paragraphs[contentStartIndex + 1].substring(0, 300);
+      
+      // Add more paragraphs if needed
+      let paraIndex = contentStartIndex + 2;
+      while (description.length < 200 && paraIndex < paragraphs.length) {
+        const additionalContent = paragraphs[paraIndex].substring(0, 200 - description.length);
+        description += ' ' + additionalContent;
+        paraIndex++;
+      }
+    }
+  } else {
+    // Fallback: skip header paragraphs and get first substantive content
+    contentStartIndex = 0;
+    while (contentStartIndex < paragraphs.length && 
+           (paragraphs[contentStartIndex].startsWith('Title: ') || 
+            paragraphs[contentStartIndex].startsWith('URL Source: ') ||
+            paragraphs[contentStartIndex].startsWith('Published Time:') ||
+            paragraphs[contentStartIndex] === 'Markdown Content')) {
+      contentStartIndex++;
+    }
+    
+    if (contentStartIndex < paragraphs.length) {
+      description = paragraphs[contentStartIndex].substring(0, 300);
+      
+      // Add more paragraphs if needed
+      let paraIndex = contentStartIndex + 1;
+      while (description.length < 200 && paraIndex < paragraphs.length) {
+        const additionalContent = paragraphs[paraIndex].substring(0, 200 - description.length);
+        description += ' ' + additionalContent;
+        paraIndex++;
+      }
+    }
+  }
+  
+  // Fallback: try line-based approach if paragraph method didn't yield good results
   if (!title || !description) {
     const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    // Extract title from line starting with "Title: "
     if (!title && lines.length > 0) {
-      // Title: first substantial line
-      const titleLine = lines.find(l => l.length > 10);
+      const titleLine = lines.find(l => l.startsWith('Title: '));
       if (titleLine) {
-        const titleMatch = titleLine.match(/^[^.!?]{10,200}[.!?]?/);
-        if (titleMatch) {
-          title = titleMatch[0];
+        title = titleLine.substring(7).substring(0, 200); // Remove "Title: " prefix
+      } else if (lines.length > 0) {
+        // Fallback to first substantial line
+        const firstLine = lines.find(l => l.length > 10);
+        if (firstLine) {
+          title = firstLine.substring(0, 200);
         }
       }
     }
-    if (!description && lines.length > 1) {
-      // Description: second substantial line or first few sentences
-      const descLines = lines.slice(1, 3); // Take up to 2 lines after title
-      if (descLines.length > 0) {
+    
+    // Extract description - look for meaningful content after the first two special lines
+    if (!description && lines.length > 0) {
+      // Find first line that's not Title: or URL Source:
+      let contentStartIndex = 0;
+      while (contentStartIndex < lines.length && 
+             (lines[contentStartIndex].startsWith('Title: ') || 
+              lines[contentStartIndex].startsWith('URL Source: '))) {
+        contentStartIndex++;
+      }
+      
+      if (contentStartIndex < lines.length) {
+        // Take next few lines as description
+        const descLines = lines.slice(contentStartIndex, Math.min(contentStartIndex + 3, lines.length));
         description = descLines.join(' ').substring(0, 300);
       }
     }
