@@ -2162,9 +2162,24 @@ async function fetchLinkMeta() {
   setLinkNote('Fetching…');
 
   try {
-    const response = await fetch(`/api/link-meta?url=${encodeURIComponent(url)}`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+    let response = await fetch(`/api/link-meta?url=${encodeURIComponent(url)}`);
+    let data = await response.json().catch(() => ({}));
+    
+    // If we get 404, we're on static hosting - use fallback
+    if (!response.ok && response.status === 404) {
+      // Fallback to r.jina.ai proxy service
+      const fallbackUrl = `https://r.jina.ai/http://${encodeURIComponent(url)}`;
+      response = await fetch(fallbackUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch link metadata: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      data = parseJinaResponse(text, url);
+    } else if (!response.ok) {
+      throw new Error(data.error || `Request failed (${response.status}).`);
+    }
 
     const filled = [];
     if (data.title && !title.value.trim()) { title.value = data.title; filled.push('title'); }
@@ -2187,6 +2202,47 @@ async function fetchLinkMeta() {
   } finally {
     button.disabled = false;
   }
+}
+
+// Helper function to parse r.jina.ai response for link metadata
+function parseJinaResponse(text, sourceUrl) {
+  // Clean up the text
+  const cleaned = text.trim();
+  
+  // Split by double newlines to get paragraphs
+  const paragraphs = cleaned.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+  
+  // Extract title and description from paragraphs
+  let title = paragraphs.length > 0 ? paragraphs[0].substring(0, 200) : '';
+  let description = paragraphs.length > 1 ? paragraphs[1].substring(0, 300) : '';
+  
+  // Fallback: if paragraph approach didn't work well, use first few lines
+  if (!title || !description) {
+    const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (!title && lines.length > 0) {
+      // Title: first substantial line
+      const titleLine = lines.find(l => l.length > 10);
+      if (titleLine) {
+        const titleMatch = titleLine.match(/^[^.!?]{10,200}[.!?]?/);
+        if (titleMatch) {
+          title = titleMatch[0];
+        }
+      }
+    }
+    if (!description && lines.length > 1) {
+      // Description: second substantial line or first few sentences
+      const descLines = lines.slice(1, 3); // Take up to 2 lines after title
+      if (descLines.length > 0) {
+        description = descLines.join(' ').substring(0, 300);
+      }
+    }
+  }
+  
+  return {
+    url: sourceUrl,
+    title: title.trim(),
+    description: description.trim()
+  };
 }
 
 function openLinkEditor(block, anchor) {
