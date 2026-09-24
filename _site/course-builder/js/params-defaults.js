@@ -82,7 +82,7 @@ export const defaults = {
   coverBackTextHeightGrids: 10,
   // 'top' or 'bottom' — which edge of the back cover the box (and its
   // padding) is anchored to; toggled via #cover-back-text-align.
-  coverBackTextAlign: 'top',
+  coverBackTextAlign: 'bottom',
   // Per-side mode's spine is colour-only — no image toggle, no upload —
   // narrow enough (7mm typical) that an independently-fit image there was
   // never going to read as anything but a sliver anyway.

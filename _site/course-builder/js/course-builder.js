@@ -532,6 +532,16 @@ async function renderCoverView() {
       backPreview.textContent = 'Add text…';
     }
   }
+  
+  // Green pockit dot at top-right of back cover — same size and inset
+  // as the card header punch (--punch-size / --punch-left), mirrored to
+  // top/right of the back panel.
+  const backPunch = document.getElementById('cover-back-punch');
+  if (backPunch) {
+    const punchInset = 4; // mm, matches --punch-left / --punch-size
+    backPunch.style.top = `${punchInset}mm`;
+    backPunch.style.right = `${punchInset}mm`;
+  }
 
   // The per-side control row spans the same overall width as #cover-spread
   // below, but (see #cover-fill-perside in the CSS) splits it into three
@@ -3636,6 +3646,16 @@ function buildPrintCoverPage() {
   const page = document.createElement('div');
   page.className = 'print-page print-page-cover';
   const spread = document.getElementById('cover-spread').cloneNode(true);
+
+  // Ensure the --cover-inner-pad CSS variable is available to cloned elements
+  // in the print preview, since it's set on #cover-view which isn't cloned.
+  const coverView = document.getElementById('cover-view');
+  if (coverView) {
+    const coverInnerPad = getComputedStyle(coverView).getPropertyValue('--cover-inner-pad');
+    if (coverInnerPad) {
+      spread.style.setProperty('--cover-inner-pad', coverInnerPad);
+    }
+  }
 
   // The live elements' current edit state (mid-edit textarea, an empty
   // box's "Add text…" placeholder) has no business printing.

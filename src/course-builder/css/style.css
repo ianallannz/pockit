@@ -1555,6 +1555,18 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   pointer-events: none;
 }
 
+/* Green pockit dot at top-right of the back cover — same size and
+   inset as the header punch dot on cards (top/left), but mirrored to
+   top/right. Sized/positioned in renderCoverView(). */
+#cover-back-punch {
+  position: absolute;
+  width: var(--punch-size);
+  height: var(--punch-size);
+  border-radius: 50%;
+  background: var(--punch-color, #00bb27);
+  pointer-events: none;
+}
+
 /* Blank space at the bottom of the front cover for the recipient's own
    handwritten name/contact details — full width minus a grid unit of
    padding on each side (left/right set, no explicit width, so it just
