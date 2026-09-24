@@ -532,6 +532,16 @@ async function renderCoverView() {
       backPreview.textContent = 'Add text…';
     }
   }
+  
+  // Green pockit dot at top-right of back cover — same size and inset
+  // as the card header punch (--punch-size / --punch-left), mirrored to
+  // top/right of the back panel.
+  const backPunch = document.getElementById('cover-back-punch');
+  if (backPunch) {
+    const punchInset = 4; // mm, matches --punch-left / --punch-size
+    backPunch.style.top = `${punchInset}mm`;
+    backPunch.style.right = `${punchInset}mm`;
+  }
 
   // The per-side control row spans the same overall width as #cover-spread
   // below, but (see #cover-fill-perside in the CSS) splits it into three
