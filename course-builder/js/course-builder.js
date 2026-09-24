@@ -3637,6 +3637,16 @@ function buildPrintCoverPage() {
   page.className = 'print-page print-page-cover';
   const spread = document.getElementById('cover-spread').cloneNode(true);
 
+  // Ensure the --cover-inner-pad CSS variable is available to cloned elements
+  // in the print preview, since it's set on #cover-view which isn't cloned.
+  const coverView = document.getElementById('cover-view');
+  if (coverView) {
+    const coverInnerPad = getComputedStyle(coverView).getPropertyValue('--cover-inner-pad');
+    if (coverInnerPad) {
+      spread.style.setProperty('--cover-inner-pad', coverInnerPad);
+    }
+  }
+
   // The live elements' current edit state (mid-edit textarea, an empty
   // box's "Add text…" placeholder) has no business printing.
   const editor = spread.querySelector('.cover-text-editor');
