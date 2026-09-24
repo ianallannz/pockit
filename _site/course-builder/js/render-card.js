@@ -608,10 +608,15 @@ function buildImageEditor(block, type) {
       block.src = src;
       save();
       render();
-    } catch (error) {
-      // Most likely cause: opened from file://, so there's no dev server.
-      setNote(error instanceof TypeError ? 'No dev server — run npm start.' : error.message, 'error');
-    }
+} catch (error) {
+       // Most likely cause: opened from file://, so there's no dev server.
+       let message = error instanceof TypeError ? 'No dev server — run npm start.' : error.message;
+       // If this is an upload failure due to missing server endpoint, provide more helpful guidance
+       if (error.message && (error.message.includes('Upload failed') || error.message.includes('405') || error.message.includes('404'))) {
+         message += ' Change to local folder storage or cloud storage under Account Settings.';
+       }
+       setNote(message, 'error');
+     }
   };
 
   if (block.src) {

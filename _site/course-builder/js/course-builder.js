@@ -842,11 +842,16 @@ function buildCoverFillRow(target, label) {
       note.textContent = '';
       save();
       renderCoverView();
-    } catch (error) {
-      // Most likely cause: opened from file://, so there's no dev server —
-      // same fallback message the card image block itself uses.
-      note.textContent = error instanceof TypeError ? 'No dev server — run npm start.' : error.message;
-    }
+} catch (error) {
+  // Most likely cause: opened from file://, so there's no dev server —
+  // same fallback message the card image block itself uses.
+  let message = error instanceof TypeError ? 'No dev server — run npm start.' : error.message;
+  // If this is an upload failure due to missing server endpoint, provide more helpful guidance
+  if (error.message && (error.message.includes('Upload failed') || error.message.includes('405') || error.message.includes('404'))) {
+    message += ' Change to local folder storage or cloud storage under Account Settings.';
+  }
+  note.textContent = message;
+}
   });
 
   return row;
