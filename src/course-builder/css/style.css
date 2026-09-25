@@ -3579,7 +3579,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   padding: 1mm 0 0;
   font-family: 'Barlow', system-ui, sans-serif;
   font-size: 6pt;
-  line-height: var(--card-line);
+  line-height: 8pt;
   color: #333333;
 }
 
