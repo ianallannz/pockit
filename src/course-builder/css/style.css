@@ -1617,7 +1617,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 2.4mm;
   font-weight: 400;
   letter-spacing: 0.08em;
-  color: #111;
+  color: #000;
 }
 
 #cover-front-title {
@@ -1627,7 +1627,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 3.2mm;
   font-weight: 700;
   line-height: 1.35;
-  color: #333;
+  color: #000;
 }
 
 /* Who prepared this, from the Profile panel — pinned to the bottom of the
@@ -1651,13 +1651,13 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 #cover-front-person-name {
   font-size: 2.2mm;
   font-weight: 600;
-  color: #333;
+  color: #000;
 }
 
 #cover-front-person-role {
   font-size: 1.9mm;
   font-weight: 400;
-  color: #666;
+  color: #000;
 }
 
 /* Set by applyCoverFill()/setupCoverDrag() in course-builder.js — only
@@ -1691,7 +1691,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 2.6mm;
   line-height: 1.4;
-  color: #1a1a1a;
+  color: #000;
 }
 
 /* Must come after the rule above, which would otherwise out-rank the UA's
