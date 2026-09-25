@@ -2217,7 +2217,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 10px;
   line-height: 1.4;
-  color: #1a1a1a;
+  color: #000;
   overflow-y: auto;
 }
 
@@ -2331,7 +2331,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Barlow', system-ui, sans-serif;
   font-size: 8pt;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
   overflow: hidden;
 }
 
@@ -2548,7 +2548,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   min-width: 0;
   overflow: hidden;
   font-family: 'Barlow', system-ui, sans-serif;
-  color: #1a1a1a;
+  color: #000;
 }
 
 /* Keeps the title clear of the source mark in the corner. */
@@ -3257,7 +3257,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 8pt;
   font-weight: 600;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
 }
 
 .card-block-boxed .card-block-input::placeholder { color: #c0c0c0; }
@@ -3319,7 +3319,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 8pt;
   font-weight: 600;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
 }
 
 .card-block-list-prompt::placeholder { color: #c0c0c0; }
@@ -3635,7 +3635,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-style: italic;
   font-size: 9pt;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
 }
 
 .card-block-quote-text::placeholder { color: #c8c8c8; }
