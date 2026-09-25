@@ -2350,13 +2350,13 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 
 .card-block-preview :is(ul, ol) {
   margin: 0 0 var(--card-line);
-  padding-left: 3.2mm;
+  padding-left: 4.2mm;
   /* Outside markers hang in the UA's own reserved gutter, which is narrower
      than our padding and lets the disc (or number) creep past the card's
      left edge to get clipped by its overflow:hidden. Inside keeps the
      marker as part of the li's own content box, which the padding does
      protect. */
-  list-style-position: inside;
+  list-style-position: outside;
 }
 
 .card-block-preview :is(ul, ol):last-child { margin-bottom: 0; }
