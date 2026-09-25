@@ -100,6 +100,13 @@ export function renderMarkdown(source) {
       flushParagraph();
       listTag = tag;
       (listItems ||= []).push(`<li>${renderInline((bullet || numbered)[1])}</li>`);
+    } else if (listItems && /^\s/.test(line)) {
+      const lastLi = listItems[listItems.length - 1];
+      const liEnd = lastLi.indexOf('</li>');
+      if (liEnd > 0) {
+        listItems[listItems.length - 1] =
+          lastLi.substring(0, liEnd) + ' ' + line.trim() + lastLi.substring(liEnd);
+      }
     } else if (!trimmed) {
       flushParagraph();
       flushList();
