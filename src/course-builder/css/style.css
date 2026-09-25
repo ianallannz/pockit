@@ -24,9 +24,9 @@
   --card-icon: #333333;
   /* Hole-punch target in the card header. Fixed mm rather than grid-derived:
      it has to match a physical punch, not the layout. */
-  --punch-size: 4mm;
-  --punch-left: 4mm;
-  --punch-gap: 2mm;
+--punch-size: 6mm;
+--punch-left: 4mm;
+--punch-gap: 2mm;
 }
 
 body {
@@ -3906,12 +3906,11 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 .card-footer { bottom: 0; }
 
 /* Positioned from the card edge rather than the header's padding, since it has
-   to line up with a physical punch. */
+    to line up with a physical punch. */
 .card-punch {
   position: absolute;
   left: var(--punch-left);
-  top: 50%;
-  transform: translateY(-50%);
+  top: var(--punch-left);
   width: var(--punch-size);
   height: var(--punch-size);
   border-radius: 50%;
@@ -3962,6 +3961,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 1.5mm;
 }
 
 .card-footer-text {
