@@ -265,6 +265,75 @@ function buildPlainEditor(block, type) {
 // Its own class rather than reusing .card-block-input: that class only gets
 // styling nested under .card-block-boxed (Reflection's box), and Footnote is
 // deliberately not boxed.
+// A one-line question over 5 evenly spaced outline circles (1–5) — print
+// space for circling a score by hand, so only the prompt and the two
+// endpoint labels are live. Behaves like Reflection otherwise (same boxed
+// treatment).
+function buildRatingEditor(block, type) {
+  const wrap = document.createElement('div');
+  wrap.className = 'card-block-rating';
+
+  const prompt = document.createElement('textarea');
+  prompt.className = 'card-block-rating-prompt';
+  prompt.value = block.body || '';
+  prompt.placeholder = type.placeholder || '';
+  prompt.spellcheck = false;
+  prompt.addEventListener('input', () => {
+    block.body = prompt.value;
+    save();
+  });
+  wrap.appendChild(prompt);
+
+  const response = document.createElement('div');
+  response.className = 'card-block-rating-response';
+
+  // Endpoint labels ("Never" / "Always"): what a 1 and a 5 mean. One row
+  // split left/right, sitting directly above the first/last circles.
+  const labels = document.createElement('div');
+  labels.className = 'card-block-rating-labels';
+
+  const low = document.createElement('input');
+  low.type = 'text';
+  low.className = 'card-block-rating-label is-low';
+  low.value = block.lowLabel || '';
+  low.placeholder = '1 means…';
+  low.addEventListener('input', () => {
+    block.lowLabel = low.value;
+    save();
+  });
+
+  const high = document.createElement('input');
+  high.type = 'text';
+  high.className = 'card-block-rating-label is-high';
+  high.value = block.highLabel || '';
+  high.placeholder = '5 means…';
+  high.addEventListener('input', () => {
+    block.highLabel = high.value;
+    save();
+  });
+
+  labels.append(low, high);
+  response.appendChild(labels);
+
+  const scale = document.createElement('div');
+  scale.className = 'card-block-rating-scale';
+  for (let i = 1; i <= 5; i++) {
+    const option = document.createElement('div');
+    option.className = 'card-block-rating-option';
+    const circle = document.createElement('span');
+    circle.className = 'card-block-rating-circle';
+    const number = document.createElement('span');
+    number.className = 'card-block-rating-number';
+    number.textContent = i;
+    option.append(circle, number);
+    scale.appendChild(option);
+  }
+  response.appendChild(scale);
+  wrap.appendChild(response);
+
+  return wrap;
+}
+
 function buildFootnoteEditor(block, type) {
   const editor = document.createElement('textarea');
   editor.className = 'card-block-footnote';
@@ -870,7 +939,7 @@ function boxContent(content, type) {
   box.appendChild(content);
   // Read back by focusBlock; markdown content handles its own focus.
   box.focusEditor = () => box.querySelector(
-    '.card-block-input, .card-block-list-prompt, .card-block-matrix-item-heading'
+    '.card-block-input, .card-block-rating-prompt, .card-block-list-prompt, .card-block-matrix-item-heading'
   )?.focus();
   return box;
 }
@@ -894,6 +963,7 @@ function buildBlockContent(block, type, card, params) {
     : type.editor === 'key-idea' ? buildKeyIdeaEditor(block, type)
     : type.editor === 'footnote' ? buildFootnoteEditor(block, type)
     : type.editor === 'quote' ? buildQuoteEditor(block, type)
+    : type.editor === 'rating' ? buildRatingEditor(block, type)
     : buildPlainEditor(block, type);
 
   return type.boxed ? boxContent(content, type) : content;

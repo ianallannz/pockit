@@ -1617,7 +1617,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 2.4mm;
   font-weight: 400;
   letter-spacing: 0.08em;
-  color: #111;
+  color: #000;
 }
 
 #cover-front-title {
@@ -1627,7 +1627,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 3.2mm;
   font-weight: 700;
   line-height: 1.35;
-  color: #333;
+  color: #000;
 }
 
 /* Who prepared this, from the Profile panel — pinned to the bottom of the
@@ -1651,13 +1651,13 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 #cover-front-person-name {
   font-size: 2.2mm;
   font-weight: 600;
-  color: #333;
+  color: #000;
 }
 
 #cover-front-person-role {
   font-size: 1.9mm;
   font-weight: 400;
-  color: #666;
+  color: #000;
 }
 
 /* Set by applyCoverFill()/setupCoverDrag() in course-builder.js — only
@@ -1691,7 +1691,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 2.6mm;
   line-height: 1.4;
-  color: #1a1a1a;
+  color: #000;
 }
 
 /* Must come after the rule above, which would otherwise out-rank the UA's
@@ -2217,7 +2217,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 10px;
   line-height: 1.4;
-  color: #1a1a1a;
+  color: #000;
   overflow-y: auto;
 }
 
@@ -2331,7 +2331,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Barlow', system-ui, sans-serif;
   font-size: 8pt;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
   overflow: hidden;
 }
 
@@ -2399,6 +2399,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
    Idea/Task) — the border is what marks it out as a place for the
    student to fill in. */
 .card-block-boxed.is-reflection,
+.card-block-boxed.is-rating,
 .card-block-boxed.is-list,
 .card-block-boxed.is-matrix {
   border-color: var(--punch-color);
@@ -2411,8 +2412,8 @@ input[type="range"]:focus-visible::-moz-range-thumb {
    default (uninset-by-.is-task) box, so any pairing among them needs
    this — not just two of the same type. Key Idea is flush like .is-task,
    so it doesn't have this problem and isn't part of the fix. */
-.card-block:has(+ .card-block > .card-block-boxed:is(.is-reflection, .is-list, .is-matrix))
-  > .card-block-boxed:is(.is-reflection, .is-list, .is-matrix) {
+.card-block:has(+ .card-block > .card-block-boxed:is(.is-reflection, .is-rating, .is-list, .is-matrix))
+  > .card-block-boxed:is(.is-reflection, .is-rating, .is-list, .is-matrix) {
   bottom: 0;
 }
 
@@ -2548,7 +2549,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   min-width: 0;
   overflow: hidden;
   font-family: 'Barlow', system-ui, sans-serif;
-  color: #1a1a1a;
+  color: #000;
 }
 
 /* Keeps the title clear of the source mark in the corner. */
@@ -3257,7 +3258,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 8pt;
   font-weight: 600;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
 }
 
 .card-block-boxed .card-block-input::placeholder { color: #c0c0c0; }
@@ -3319,7 +3320,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 8pt;
   font-weight: 600;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
 }
 
 .card-block-list-prompt::placeholder { color: #c0c0c0; }
@@ -3389,6 +3390,101 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Barlow', sans-serif;
   font-size: 7pt;
   color: var(--punch-color);
+}
+
+/* ── Rating (question + 5 outline circles) ── */
+/* Fills the box like .card-block-list does (flex:1 in the row-direction
+   .card-block-boxed), but is itself a column: the question prompt on top,
+   then the 1–5 scale sharing whatever's left. */
+.card-block-rating {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-block-boxed .card-block-rating-prompt {
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  padding: 0;
+  /* Keeps the wrapped text clear of the corner icon. */
+  padding-right: 4mm;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 8pt;
+  font-weight: 600;
+  line-height: var(--card-line);
+  color: #000;
+}
+
+.card-block-boxed .card-block-rating-prompt::placeholder { color: #c0c0c0; }
+
+.card-block-rating-response {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1.5mm;
+}
+
+/* Labels and circles share one 5-column grid, so each endpoint label sits
+   exactly above its own end circle rather than roughly near it. */
+.card-block-rating-labels {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.card-block-rating-label {
+  min-width: 0;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-family: 'Barlow', sans-serif;
+  font-size: 6pt;
+  letter-spacing: 0.04em;
+  color: #333;
+  text-align: center;
+}
+
+.card-block-rating-label.is-low { grid-column: 1; }
+.card-block-rating-label.is-high { grid-column: 5; }
+.card-block-rating-label::placeholder { color: #c0c0c0; }
+
+.card-block-rating-scale {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  justify-items: center;
+}
+
+.card-block-rating-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1mm;
+}
+
+.card-block-rating-circle {
+  width: 6mm;
+  height: 6mm;
+  box-sizing: border-box;
+  border: 0.3mm solid #000;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.card-block-rating-number {
+  font-family: 'Barlow', sans-serif;
+  font-size: 7pt;
+  line-height: 1;
+  color: #000;
 }
 
 /* ── Matrix (item rows × 1-2 rating columns) ── */
@@ -3579,7 +3675,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   padding: 1mm 0 0;
   font-family: 'Barlow', system-ui, sans-serif;
   font-size: 6pt;
-  line-height: var(--card-line);
+  line-height: 8pt;
   color: #333333;
 }
 
@@ -3635,7 +3731,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-style: italic;
   font-size: 9pt;
   line-height: var(--card-line);
-  color: #1a1a1a;
+  color: #000;
 }
 
 .card-block-quote-text::placeholder { color: #c8c8c8; }

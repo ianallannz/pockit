@@ -82,6 +82,11 @@ export const BLOCK_TYPES = [
     icon: '<path d="M20 5H4v10h5l4 4v-4h7z"/><path d="M9 10h6"/>',
   },
   {
+    id: 'rating', label: 'Rating', defaultRows: 4, minRows: MIN_BLOCK_ROWS,
+    boxed: true, editor: 'rating', placeholder: 'Write a question that requests a rating…',
+    format: { body: 'body', attrs: ['lowLabel', 'highLabel'] },
+    icon: '<path d="M4 16a8 8 0 0 1 16 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1"/>',
+  },
     // Numbered blank lines under a one-line prompt — "List 3 takeaways from
     // the reading" — for the student to fill in by hand, not on screen.
     // minN/maxN/defaultN drive the count stepper on the block itself; minRows
@@ -89,6 +94,7 @@ export const BLOCK_TYPES = [
     // used before the block exists yet (add-time gating, picker disabling).
     // Once a block exists, minRowsFor() derives its real minimum from its own
     // `n` instead.
+  {
     id: 'list', label: 'List', defaultRows: 1 + 3, minRows: 1 + 2,
     minN: 2, maxN: 5, defaultN: 3,
     boxed: true, editor: 'list', placeholder: 'List the items…',
