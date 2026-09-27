@@ -9,6 +9,7 @@ import {
 import {
   buildCard, configureRenderCard, renderMarkdown, paintPresentSlide,
   imageFit, IMAGE_FITS, DEFAULT_IMAGE_FIT, ACCEPTED_IMAGES, primeImageSrcCache,
+  freezeAutoGrowPrompts,
 } from './render-card.js';
 import { defaults } from './params-defaults.js';
 import * as localStorageAdapter from './storage/local-storage-adapter.js';
@@ -3618,6 +3619,12 @@ function buildPrintPages() {
       root.appendChild(blankPage);
     }
   }
+
+  // Multi-line List/Matrix prompts are auto-grow textareas on screen, sized
+  // via a queued microtask that never runs before the browser captures the
+  // print (first line only) — frozen to static divs instead, which size to
+  // their content with no measurement. See freezeAutoGrowPrompts().
+  freezeAutoGrowPrompts(root);
 }
 
 // A filler card for buildPrintPages()'s "blank grids overleaf" option:

@@ -414,6 +414,26 @@ function buildAutoGrowPrompt(block, type, className) {
   return prompt;
 }
 
+// Swaps every auto-grow prompt textarea under `root` for a static div with
+// the same text — for the print pipeline only. Replaces flushAutoGrowPrompts
+// (which measured scrollHeight synchronously, but #print-root is
+// display:none on screen so that measured 0 and hid every prompt
+// outright): a div sizes to its content with no measurement at all, so it
+// renders all lines wherever the tree ends up being displayed.
+export function freezeAutoGrowPrompts(root) {
+  root.querySelectorAll('textarea.card-block-list-prompt').forEach(prompt => {
+    const frozen = document.createElement('div');
+    frozen.className = prompt.className;
+    if (prompt.value) {
+      frozen.textContent = prompt.value;
+    } else {
+      frozen.classList.add('is-empty');
+      frozen.textContent = prompt.placeholder;
+    }
+    prompt.replaceWith(frozen);
+  });
+}
+
 // One-line prompt over N blank numbered lines — the lines are print space for
 // handwriting, not fields, so only the prompt and the +/− count are live.
 function buildListEditor(block, type, card, params) {
