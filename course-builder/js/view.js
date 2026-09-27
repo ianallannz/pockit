@@ -8,7 +8,7 @@
 // unchanged). Postgres RLS is the real access boundary regardless — see
 // supabase/schema.sql's course_invites policies — this page just reflects
 // back whatever that grants.
-import { buildCard, configureRenderCard, paintPresentSlide } from './render-card.js';
+import { buildCard, configureRenderCard, paintPresentSlide, freezeAutoGrowPrompts } from './render-card.js';
 import { createSupabaseAdapter } from './storage/supabase-adapter.js';
 import { getSupabaseClient } from './storage/supabase-client.js';
 import { listMyInvites, acceptInvite } from './storage/course-invites.js';
@@ -409,6 +409,10 @@ function buildViewerPrintPages() {
     for (const el of cardEls.slice(i, i + 3)) page.appendChild(el);
     root.appendChild(page);
   }
+
+  // Same beforeprint race as the editor's buildPrintPages() — see
+  // freezeAutoGrowPrompts() in render-card.js.
+  freezeAutoGrowPrompts(root);
 }
 window.addEventListener('beforeprint', buildViewerPrintPages);
 

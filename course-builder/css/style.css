@@ -3325,6 +3325,13 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 
 .card-block-list-prompt::placeholder { color: #c0c0c0; }
 
+/* Print-frozen prompt (see freezeAutoGrowPrompts()): a div, not a textarea,
+   so it sizes to its content with no measurement. Keeps the textarea's own
+   type via the shared class above; only the wrapping (a textarea wraps by
+   default, a div doesn't) and the empty-state color differ. */
+div.card-block-list-prompt { white-space: pre-wrap; }
+div.card-block-list-prompt.is-empty { color: #c0c0c0; }
+
 /* Screen-only chrome — the count is fixed once printed — so it stays out of
    the way until the block is hovered, same as .card-block-remove. */
 .card-block-list-count {
@@ -4053,7 +4060,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-size: 2.4mm;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #666;
+  color: #000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4064,7 +4071,7 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   font-family: 'Barlow', sans-serif;
   font-size: 2.4mm;
   letter-spacing: 0.08em;
-  color: #666;
+  color: #333;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
