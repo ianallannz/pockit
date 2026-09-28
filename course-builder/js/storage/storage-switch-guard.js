@@ -64,3 +64,26 @@ export function buildStorageConflictMessage({ remoteKind, remoteState, localStat
     + `Switching will replace what is shown on this device (${summarizeStateDetail(localState)}) with the ${remoteLabel} data. `
     + `Your local view will be discarded. Continue?`;
 }
+
+// True when the probe stamp is strictly newer than the baseline this device
+// last adopted or wrote. ISO-8601 UTC stamps compare lexicographically, but
+// Date.parse is used so mixed/invalid inputs fail closed (false) rather than
+// nagging. Null probe means "remote holds nothing" — never newer.
+export function isRemoteNewer(baselineIso, probeIso) {
+  if (!probeIso) return false;
+  const probe = Date.parse(probeIso);
+  if (Number.isNaN(probe)) return false;
+  if (!baselineIso) return true;
+  const baseline = Date.parse(baselineIso);
+  if (Number.isNaN(baseline)) return true;
+  return probe > baseline;
+}
+
+// Message for the pull-only refresh confirm (already on cloud, cloud moved
+// on without this device). Refresh never pushes: local edits, saved or not,
+// are discarded on confirm — said plainly.
+export function buildCloudRefreshMessage({ remoteState, localState }) {
+  return `Your cloud account has newer changes (${summarizeStateDetail(remoteState)}). `
+    + `Refreshing will replace what is shown on this device (${summarizeStateDetail(localState)}), `
+    + `including any unsaved edits here. Continue?`;
+}

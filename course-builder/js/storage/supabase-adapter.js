@@ -319,5 +319,32 @@ export function createSupabaseAdapter(client, userId) {
     },
   };
 
-  return { load, save, describe, attachments, avatar };
+  // Lightweight "is there anything newer?" probe for the multi-device
+  // stale check (see course-builder.js's refresh-from-cloud flow). One
+  // newest-first row per table — far cheaper than load()'s full pull — and
+  // the max across all six tables this backend writes (every save() stamps
+  // updated_at on each touched row). Returns an ISO string, or null when
+  // the account holds nothing yet. Throws on network/permission failure so
+  // callers can stay put rather than mistaking an error for "empty".
+  async function latestUpdate() {
+    const newestIn = async (table) => {
+      const rows = unwrap(await client.from(table)
+        .select('updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1));
+      return rows?.[0]?.updated_at || null;
+    };
+    const stamps = await Promise.all([
+      newestIn('courses'),
+      newestIn('lessons'),
+      newestIn('cards'),
+      newestIn('user_state'),
+      newestIn('profiles'),
+    ]);
+    const present = stamps.filter(Boolean).sort();
+    return present.length ? present[present.length - 1] : null;
+  }
+
+  return { load, save, describe, attachments, avatar, latestUpdate };
 }
