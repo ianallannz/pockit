@@ -411,7 +411,8 @@ body.sidebar-open #sidebar-backdrop {
    #reset-settings-btn's weight than a small inline action. #share-preview-btn
    shares it too — same "full-width, neutral, no invite/revoke needed" weight. */
 #account-status-action,
-#share-preview-btn {
+#share-preview-btn,
+#cloudRefreshBtn {
   width: 100%;
   height: 32px;
   display: flex;
@@ -428,7 +429,38 @@ body.sidebar-open #sidebar-backdrop {
 }
 
 #account-status-action:hover,
-#share-preview-btn:hover { background: #fff; border: 1px solid var(--brand-green); }
+#share-preview-btn:hover,
+#cloudRefreshBtn:hover { background: #fff; border: 1px solid var(--brand-green); }
+
+#cloudRefreshBtn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Stale notice state — the background probe found cloud strictly newer than
+   what this device adopted or wrote (see maybeNotifyCloudNewer()). Same
+   green accent as the other storage affordances, just always on. */
+#cloudRefreshBtn.is-stale { border: 1px solid var(--brand-green); font-weight: 700; }
+
+/* Pull-only refresh row under the Cloud option — button plus its one-line
+   status, same 9px detail treatment as .storage-option-text small. */
+#cloud-refresh-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 20px;
+}
+
+/* Author display:flex above beats the UA [hidden] style without this. */
+#cloud-refresh-row[hidden] { display: none; }
+
+#cloudRefreshStatus {
+  font-size: 9px;
+  color: var(--label-color);
+  line-height: 1.4;
+}
+
+#cloudRefreshStatus:empty { display: none; }
 
 /* Not yet configured (no Supabase project — see supabase-config.js): shown
    disabled rather than hidden, so the panel doesn't silently change shape

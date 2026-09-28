@@ -619,6 +619,14 @@
         <small id="storageModeCloudDetail">Sync course data across your devices.</small>
       </span>
     </label>
+    <!-- Pull-only sync for the multi-device case (see refreshFromCloud() in
+         course-builder.js): checks whether the cloud copy moved on while
+         this device sat open, and adopts it only on explicit confirm. Shown
+         only while on cloud and signed in — see updateStorageOptions(). -->
+    <div id="cloud-refresh-row" hidden>
+      <button id="cloudRefreshBtn" type="button">Refresh from cloud</button>
+      <small id="cloudRefreshStatus"></small>
+    </div>
   </div>
 
   <!-- Identity only — always shown (unlike #storage-options' vault row,

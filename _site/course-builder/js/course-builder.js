@@ -22,12 +22,25 @@ import { isSupabaseConfigured } from './config/supabase-config.js';
 import { getCurrentUser, signInWithEmail, signOut, trySessionRestore, onAuthStateChange } from './auth/auth.js';
 import { positionPopover } from './popover.js';
 import { hasSeenTour, markTourSeen, runTour } from './onboarding-tour.js';
-import { decideStorageSwitch, buildStorageConflictMessage } from './storage/storage-switch-guard.js';
+import { decideStorageSwitch, buildStorageConflictMessage, isRemoteNewer, buildCloudRefreshMessage } from './storage/storage-switch-guard.js';
 
 // Last storage-switch failure to surface in #storage-options (see
 // updateStorageOptions()). A failed remote read must never be treated as
 // "remote is empty" — the switch stays put and this message explains why.
 let storageSwitchError = null;
+
+// Newest cloud `updated_at` this device has adopted or written itself — the
+// baseline the stale check compares against. Null until the first successful
+// cloud adopt/save of the session.
+let lastCloudBaseline = null;
+// Set when a background probe finds cloud strictly newer than the baseline.
+// Inline notice only — never an auto-reload, so in-progress typing is safe.
+let cloudHasNewer = false;
+// Transient one-line status for the Refresh row (checking/up-to-date/error).
+// Cleared on every successful adopt and every storage switch.
+let cloudRefreshStatus = null;
+// Guards overlapping probes (rapid tab switching fires visible repeatedly).
+let cloudProbeInFlight = false;
 // Remembers an explicit "Cloud" storage choice across reloads — Supabase
 // Auth itself persists the *session* (see auth.js), but not which storage
 // backend a signed-in user picked; switchStorageMode() below keeps this in
@@ -1073,10 +1086,31 @@ function flushSave() {
   // before this callback actually runs, so reading the live variable there
   // would misdirect an old vault's last edits onto the new one.
   const adapter = activeAdapter;
+  const adapterKind = activeAdapterKind;
   pendingState = null;
   saveInFlight = saveInFlight
     .then(() => adapter.save(state))
+    .then(() => {
+      // Our own writes are the newest thing we know about (updated_at is
+      // client-stamped) — without this, the stale probe would flag our own
+      // saves as "newer" the next time the tab regains focus. Known limit:
+      // another device writing with an earlier client clock between our
+      // saves can hide below this baseline; Refresh still catches it by
+      // comparing full state, not just stamps.
+      if (adapterKind === 'cloud') lastCloudBaseline = new Date().toISOString();
+    })
     .catch(error => console.error('[course-builder] save failed', error));
+}
+
+// Drops a debounced-but-unflushed save without writing it anywhere. Used
+// before adopting remote state: the pending snapshot predates the adopt and
+// its timer would otherwise push stale content back over the fresh data.
+function discardPendingSave() {
+  clearTimeout(saveDebounceTimer);
+  clearTimeout(saveMaxWaitTimer);
+  saveDebounceTimer = null;
+  saveMaxWaitTimer = null;
+  pendingState = null;
 }
 
 function save() {
@@ -1087,7 +1121,13 @@ function save() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushSave();
+  if (document.visibilityState === 'hidden') {
+    flushSave();
+    return;
+  }
+  // Returning to the tab never auto-reloads (that would discard in-progress
+  // typing) — it only raises the inline "cloud has newer changes" notice.
+  if (document.visibilityState === 'visible') void maybeNotifyCloudNewer();
 });
 window.addEventListener('beforeunload', flushSave);
 
@@ -1158,6 +1198,7 @@ async function pickNewVault(isMigration) {
     openConfirmDialog(
       buildStorageConflictMessage({ remoteKind: 'vault', remoteState, localState }),
       async () => {
+        discardPendingSave();
         activeAdapter = candidate;
         await load();
         await activateVault(handle);
@@ -1540,6 +1581,23 @@ function updateStorageOptions() {
   if (storageSwitchError && vaultSupported && activeAdapterKind !== 'vault') {
     vaultDetail.textContent = storageSwitchError;
   }
+
+  // Pull-only refresh lives here (not on the Cloud radio itself, which
+  // switches backends): visible only while on cloud and signed in.
+  const refreshRow = document.getElementById('cloud-refresh-row');
+  const refreshBtn = document.getElementById('cloudRefreshBtn');
+  const refreshStatus = document.getElementById('cloudRefreshStatus');
+  const showRefresh = Boolean(user) && activeAdapterKind === 'cloud';
+  refreshRow.hidden = !showRefresh;
+  refreshBtn.disabled = !showRefresh;
+  refreshBtn.classList.toggle('is-stale', cloudHasNewer);
+  if (storageSwitchError) {
+    refreshStatus.textContent = storageSwitchError;
+  } else if (cloudHasNewer) {
+    refreshStatus.textContent = 'Cloud has newer changes — review before editing here.';
+  } else {
+    refreshStatus.textContent = cloudRefreshStatus || '';
+  }
 }
 
 // Anchor for the storage-conflict confirm: the storage radio when the
@@ -1561,6 +1619,8 @@ function storageConflictAnchor(preferredId) {
 // (pre-click-handler) checked-state change on a cancelled/failed switch.
 async function switchStorageMode(mode) {
   storageSwitchError = null;
+  cloudHasNewer = false;
+  cloudRefreshStatus = null;
   if (mode === 'local') {
     await useLocalStorage();
   } else if (mode === 'vault') {
@@ -1603,6 +1663,7 @@ async function useCloudStorage(isMigration) {
     openConfirmDialog(
       buildStorageConflictMessage({ remoteKind: 'cloud', remoteState, localState }),
       async () => {
+        discardPendingSave();
         activeAdapter = adapter;
         await load();
         await activateCloudStorage();
@@ -1641,6 +1702,131 @@ async function activateCloudStorage() {
   await vaultHandleStore.clearHandle();
   await updateProfileDetails();
   render();
+  await refreshCloudBaseline();
+}
+
+// ── Refresh from cloud ─────────────────────────────────────────
+// Pull-only sync for the already-on-cloud case (the second-laptop return:
+// laptop 1 moved on while this tab sat open). Refresh never pushes — if
+// the pull finds nothing to adopt it just says so, and if both sides hold
+// courses it asks before discarding the local view, same spirit as the
+// switch-time conflict dialog.
+
+// Best-effort baseline capture after adopting cloud state. A failed probe
+// keeps the old baseline (fail closed — worst case is a redundant notice).
+async function refreshCloudBaseline() {
+  try {
+    if (activeAdapterKind !== 'cloud' || typeof activeAdapter.latestUpdate !== 'function') return;
+    const stamp = await activeAdapter.latestUpdate();
+    if (stamp) lastCloudBaseline = stamp;
+  } catch (error) {
+    console.error('[course-builder] cloud baseline probe failed', error);
+  }
+}
+
+// Fire-and-forget background check on tab return. Sets the inline notice at
+// most — never opens a dialog or reloads, so typing is never interrupted.
+// A failed probe stays silent here (console only); the manual Refresh
+// button surfaces errors when the user explicitly asks.
+async function maybeNotifyCloudNewer() {
+  if (activeAdapterKind !== 'cloud' || !getCurrentUser()) return;
+  if (typeof activeAdapter.latestUpdate !== 'function') return;
+  if (cloudProbeInFlight) return;
+  cloudProbeInFlight = true;
+  try {
+    const stamp = await activeAdapter.latestUpdate();
+    // Adapter swapped mid-probe (user switched storage): drop the result.
+    if (activeAdapterKind !== 'cloud') return;
+    if (isRemoteNewer(lastCloudBaseline, stamp)) {
+      cloudHasNewer = true;
+      updateStorageOptions();
+    }
+  } catch (error) {
+    console.error('[course-builder] cloud newness probe failed', error);
+  } finally {
+    cloudProbeInFlight = false;
+  }
+}
+
+async function refreshFromCloud() {
+  if (activeAdapterKind !== 'cloud' || !getCurrentUser()) return;
+  if (typeof activeAdapter.latestUpdate !== 'function') return;
+
+  cloudRefreshStatus = 'Checking cloud…';
+  cloudHasNewer = false;
+  updateStorageOptions();
+
+  const fail = (message) => {
+    cloudRefreshStatus = message;
+    updateStorageOptions();
+  };
+
+  let stamp = null;
+  try {
+    stamp = await activeAdapter.latestUpdate();
+  } catch (error) {
+    console.error('[course-builder] cloud refresh probe failed', error);
+    fail(`Could not reach your cloud account (${error.message}). Nothing was changed.`);
+    return;
+  }
+  if (activeAdapterKind !== 'cloud') return; // Switched away mid-probe.
+  if (!isRemoteNewer(lastCloudBaseline, stamp)) {
+    if (stamp) lastCloudBaseline = stamp;
+    cloudRefreshStatus = 'Already up to date.';
+    updateStorageOptions();
+    return;
+  }
+
+  // Pull-only: snapshot() the in-memory view for the dialog summary, but
+  // deliberately do NOT flushSave() first — flushing would push this stale
+  // view over the newer cloud copy before comparing. (adapter.load() below
+  // only primes the adapter's own diff cache; it never touches the live
+  // globals — load() is what adopts.)
+  const localState = snapshot();
+  let remoteState = null;
+  try {
+    remoteState = await activeAdapter.load();
+  } catch (error) {
+    console.error('[course-builder] cloud refresh read failed', error);
+    fail(`Could not read your cloud account (${error.message}). Nothing was changed.`);
+    return;
+  }
+  if (activeAdapterKind !== 'cloud') return; // Switched away mid-read.
+
+  const decision = decideStorageSwitch(localState, remoteState);
+  if (decision === 'nothing' || decision === 'seed-remote') {
+    // Probe saw a stamp but the pull holds no courses (e.g. only
+    // user_state/profile rows, or rows deleted between the two reads).
+    // Refresh never pushes, so report rather than seed.
+    cloudRefreshStatus = 'Cloud has no courses — nothing to pull.';
+    updateStorageOptions();
+    return;
+  }
+  if (decision === 'adopt-remote') {
+    discardPendingSave();
+    await load();
+    lastCloudBaseline = stamp;
+    cloudRefreshStatus = null;
+    await updateProfileDetails();
+    render();
+    updateStorageOptions();
+    return;
+  }
+  openConfirmDialog(
+    buildCloudRefreshMessage({ remoteState, localState }),
+    async () => {
+      discardPendingSave();
+      await load();
+      lastCloudBaseline = stamp;
+      cloudHasNewer = false;
+      cloudRefreshStatus = null;
+      await updateProfileDetails();
+      render();
+      updateStorageOptions();
+    },
+    storageConflictAnchor('storageModeCloud'),
+    'Use cloud data'
+  );
 }
 
 // Back to local storage — flushes whatever was pending against the
@@ -4080,6 +4266,7 @@ document.getElementById('share-preview-btn').addEventListener('click', openViewe
 document.getElementById('storageModeLocal').addEventListener('click', () => switchStorageMode('local'));
 document.getElementById('storageModeVault').addEventListener('click', () => switchStorageMode('vault'));
 document.getElementById('storageModeCloud').addEventListener('click', () => switchStorageMode('cloud'));
+document.getElementById('cloudRefreshBtn').addEventListener('click', () => { void refreshFromCloud(); });
 document.getElementById('profile-avatar-btn').addEventListener('click', () => document.getElementById('profileAvatarPicker').click());
 // #profile-avatar-note is a <span>, not a real form control — disabled
 // doesn't apply to it the way it does to #profile-avatar-btn above, so it
