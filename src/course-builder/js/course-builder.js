@@ -22,6 +22,12 @@ import { isSupabaseConfigured } from './config/supabase-config.js';
 import { getCurrentUser, signInWithEmail, signOut, trySessionRestore, onAuthStateChange } from './auth/auth.js';
 import { positionPopover } from './popover.js';
 import { hasSeenTour, markTourSeen, runTour } from './onboarding-tour.js';
+import { decideStorageSwitch, buildStorageConflictMessage } from './storage/storage-switch-guard.js';
+
+// Last storage-switch failure to surface in #storage-options (see
+// updateStorageOptions()). A failed remote read must never be treated as
+// "remote is empty" — the switch stays put and this message explains why.
+let storageSwitchError = null;
 // Remembers an explicit "Cloud" storage choice across reloads — Supabase
 // Auth itself persists the *session* (see auth.js), but not which storage
 // backend a signed-in user picked; switchStorageMode() below keeps this in
@@ -1120,13 +1126,13 @@ const vaultSupported = 'showDirectoryPicker' in window;
 let pendingVaultReconnectHandle = null;
 
 // `isMigration`: true means the current in-memory state came from plain
-// localStorage (not already synced anywhere) — the chosen folder gets
-// seeded from it unconditionally. False (switching from a vault or cloud
-// already in progress, or nothing local worth preferring) tries loading
-// the folder's own content first and only falls back to seeding it if
-// that comes back empty — the same as switching between two
-// already-populated vaults should behave.
+// `isMigration` is kept for call-site compatibility only — the decision no
+// longer branches on it. Every switch peeks at the folder first: empty
+// folder seeds from local, folder with data adopts it, and both sides with
+// data asks before discarding the local view. A shared folder is never
+// blindly overwritten with local state.
 async function pickNewVault(isMigration) {
+  void isMigration;
   let handle;
   try {
     handle = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -1136,18 +1142,48 @@ async function pickNewVault(isMigration) {
 
   flushSave(); // Anything pending for the outgoing adapter goes there first.
 
-  if (isMigration) {
-    const seed = createVaultAdapter(handle);
-    await seed.save(snapshot());
-    activeAdapter = seed;
-  } else {
-    activeAdapter = createVaultAdapter(handle);
-    if (!(await load())) {
-      // Empty folder: seed it from what's currently loaded rather than
-      // wiping the UI back to a single blank course.
-      await activeAdapter.save(snapshot());
-    }
+  const candidate = createVaultAdapter(handle);
+  const localState = snapshot();
+  let remoteState = null;
+  try {
+    remoteState = await candidate.load();
+  } catch (error) {
+    console.error('[course-builder] vault read failed', error);
+    storageSwitchError = `Could not read the chosen folder (${error.message}). Stayed where you were — nothing was overwritten.`;
+    return;
   }
+
+  const decision = decideStorageSwitch(localState, remoteState);
+  if (decision === 'confirm') {
+    openConfirmDialog(
+      buildStorageConflictMessage({ remoteKind: 'vault', remoteState, localState }),
+      async () => {
+        activeAdapter = candidate;
+        await load();
+        await activateVault(handle);
+        updateStorageOptions();
+      },
+      storageConflictAnchor('storageModeVault'),
+      'Use folder data'
+    );
+    return;
+  }
+
+  activeAdapter = candidate;
+  if (decision === 'seed-remote') {
+    // Folder is empty: seed it from what's currently loaded rather than
+    // wiping the UI back to a single blank course.
+    await activeAdapter.save(localState);
+  } else if (decision === 'adopt-remote') {
+    await load();
+  }
+  await activateVault(handle);
+}
+
+// Shared tail of every successful vault switch — sets the kind, forgets the
+// cloud preference (see comment below), persists the handle, and refreshes
+// the avatar capability the new backend may have.
+async function activateVault(handle) {
   activeAdapterKind = 'vault';
   pendingVaultReconnectHandle = null;
 
@@ -1160,10 +1196,6 @@ async function pickNewVault(isMigration) {
   // cloud-restore guard only checks activeAdapterKind, not how it got there.
   localStorage.removeItem(CLOUD_STORAGE_PREFERENCE_KEY);
   await vaultHandleStore.saveHandle(handle);
-  // The migration branch above doesn't go through load() (it seeds the
-  // vault instead of reading from it), so it wouldn't otherwise pick up
-  // vault's newly-available avatar capability — see updateProfileDetails().
-  // Harmless to call again in the non-migration branch, which already did.
   await updateProfileDetails();
   render();
 }
@@ -1498,7 +1530,26 @@ function updateStorageOptions() {
   const user = getCurrentUser();
   cloudRadio.checked = activeAdapterKind === 'cloud';
   cloudRadio.disabled = !user;
-  cloudDetail.textContent = user ? 'Sync course data across your devices.' : 'Sign in below to enable.';
+  if (!user) {
+    cloudDetail.textContent = 'Sign in below to enable.';
+  } else if (storageSwitchError) {
+    cloudDetail.textContent = storageSwitchError;
+  } else {
+    cloudDetail.textContent = 'Sync course data across your devices.';
+  }
+  if (storageSwitchError && vaultSupported && activeAdapterKind !== 'vault') {
+    vaultDetail.textContent = storageSwitchError;
+  }
+}
+
+// Anchor for the storage-conflict confirm: the storage radio when the
+// profile panel is open (manual switch), else #profile-btn (e.g. the
+// startup auto-restore path, where the panel is closed and the radio has
+// no usable rect for positionPopover()).
+function storageConflictAnchor(preferredId) {
+  const preferred = document.getElementById(preferredId);
+  if (preferred && preferred.offsetParent !== null) return preferred;
+  return document.getElementById('profile-btn');
 }
 
 // The one gesture that actually switches activeAdapter — clicking a row
@@ -1509,6 +1560,7 @@ function updateStorageOptions() {
 // re-syncs the radios either way, undoing the browser's own immediate
 // (pre-click-handler) checked-state change on a cancelled/failed switch.
 async function switchStorageMode(mode) {
+  storageSwitchError = null;
   if (mode === 'local') {
     await useLocalStorage();
   } else if (mode === 'vault') {
@@ -1520,12 +1572,13 @@ async function switchStorageMode(mode) {
   updateStorageOptions();
 }
 
-// `isMigration`: true means the current in-memory state came from plain
-// localStorage (not already synced anywhere) — seed the cloud copy from it
-// unconditionally. False (switching from a vault, or nothing local worth
-// preferring) tries loading the cloud copy first and only falls back to
-// seeding it if that comes back empty.
+// `isMigration` is kept for call-site compatibility only — the decision no
+// longer branches on it. Every switch peeks at the cloud copy first: empty
+// cloud seeds from local, cloud with data adopts it, and both sides with
+// data asks before discarding the local view. Local state is never uploaded
+// over a populated cloud account from here.
 async function useCloudStorage(isMigration) {
+  void isMigration;
   const user = getCurrentUser();
   const client = await getSupabaseClient();
   if (!user || !client) return;
@@ -1533,15 +1586,47 @@ async function useCloudStorage(isMigration) {
   flushSave();
   const adapter = createSupabaseAdapter(client, user.id);
 
-  if (isMigration) {
-    await adapter.save(snapshot());
-    activeAdapter = adapter;
-  } else {
-    activeAdapter = adapter;
-    if (!(await load())) {
-      await activeAdapter.save(snapshot());
-    }
+  // Non-destructive peek: adapter.load() reads without touching the live
+  // globals (unlike load() below, which adopts into them).
+  const localState = snapshot();
+  let remoteState = null;
+  try {
+    remoteState = await adapter.load();
+  } catch (error) {
+    console.error('[course-builder] cloud read failed', error);
+    storageSwitchError = `Could not read your cloud account (${error.message}). Stayed where you were — nothing was overwritten.`;
+    return;
   }
+
+  const decision = decideStorageSwitch(localState, remoteState);
+  if (decision === 'confirm') {
+    openConfirmDialog(
+      buildStorageConflictMessage({ remoteKind: 'cloud', remoteState, localState }),
+      async () => {
+        activeAdapter = adapter;
+        await load();
+        await activateCloudStorage();
+        updateStorageOptions();
+      },
+      storageConflictAnchor('storageModeCloud'),
+      'Use cloud data'
+    );
+    return;
+  }
+
+  activeAdapter = adapter;
+  if (decision === 'seed-remote') {
+    await activeAdapter.save(localState);
+  } else if (decision === 'adopt-remote') {
+    await load();
+  }
+  await activateCloudStorage();
+}
+
+// Shared tail of every successful cloud switch — sets the kind, remembers
+// the preference for the next reload, forgets any vault handle, and
+// refreshes the avatar capability the new backend provides.
+async function activateCloudStorage() {
   activeAdapterKind = 'cloud';
 
   localStorage.setItem(CLOUD_STORAGE_PREFERENCE_KEY, '1');
@@ -1554,9 +1639,6 @@ async function useCloudStorage(isMigration) {
   // just-made "use Cloud" choice back to the old folder on every reload.
   pendingVaultReconnectHandle = null;
   await vaultHandleStore.clearHandle();
-  // See pickNewVault()'s matching comment — the migration branch above
-  // doesn't go through load(), so it wouldn't otherwise pick up cloud's
-  // newly-available avatar capability.
   await updateProfileDetails();
   render();
 }
@@ -3812,10 +3894,13 @@ let confirmAction = null;
 
 // Anchored next to whatever triggered it (the remove button), same as the
 // link/image editors, rather than centered — so it reads as a reaction to
-// the click rather than an unrelated interruption.
-function openConfirmDialog(message, onConfirm, anchor) {
+// the click rather than an unrelated interruption. `confirmLabel` overrides
+// the default "Delete" button text for non-deletion confirms (e.g. storage
+// switches); existing deletion callers omit it and are unchanged.
+function openConfirmDialog(message, onConfirm, anchor, confirmLabel) {
   const dialog = document.getElementById('confirm-dialog');
   document.getElementById('confirm-dialog-message').textContent = message;
+  document.getElementById('confirmOk').textContent = confirmLabel || 'Delete';
   confirmAction = onConfirm;
   document.getElementById('confirm-dialog-backdrop').hidden = false;
   dialog.hidden = false;
