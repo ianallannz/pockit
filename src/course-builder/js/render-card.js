@@ -187,16 +187,14 @@ function uploadImage(file) { return hooks.uploadImage(file); }
 function resolveImageSrc(reference) { return hooks.resolveImageSrc(reference); }
 
 // ── Block editors ────────────────────────────────────────────
+// A wrapping textarea rather than a single-line input, so a long heading
+// wraps inside its box the way List/Matrix prompts do — grown by the shared
+// buildAutoGrowPrompt() below (function declarations hoist, so the later
+// definition is fine) and frozen for print the same way. The wrapper keeps
+// the bottom-aligned placement the input had: headings sit on the baseline
+// at the foot of their block.
 function buildLineEditor(block, type) {
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'card-block-heading';
-  input.value = block.body || '';
-  input.placeholder = type.label;
-  input.addEventListener('input', () => {
-    block.body = input.value;
-    save();
-  });
+  const input = buildAutoGrowPrompt(block, type, 'card-block-heading');
 
   const wrap = document.createElement('div');
   wrap.className = 'card-block-line';
@@ -414,14 +412,15 @@ function buildAutoGrowPrompt(block, type, className) {
   return prompt;
 }
 
-// Swaps every auto-grow prompt textarea under `root` for a static div with
-// the same text — for the print pipeline only. Replaces flushAutoGrowPrompts
-// (which measured scrollHeight synchronously, but #print-root is
-// display:none on screen so that measured 0 and hid every prompt
-// outright): a div sizes to its content with no measurement at all, so it
-// renders all lines wherever the tree ends up being displayed.
+// Swaps every auto-grow textarea under `root` (list/matrix prompts and the
+// wrapping heading) for a static div with the same text — for the print
+// pipeline only. Replaces flushAutoGrowPrompts (which measured scrollHeight
+// synchronously, but #print-root is display:none on screen so that measured
+// 0 and hid every prompt outright): a div sizes to its content with no
+// measurement at all, so it renders all lines wherever the tree ends up
+// being displayed.
 export function freezeAutoGrowPrompts(root) {
-  root.querySelectorAll('textarea.card-block-list-prompt').forEach(prompt => {
+  root.querySelectorAll('textarea.card-block-list-prompt, textarea.card-block-heading').forEach(prompt => {
     const frozen = document.createElement('div');
     frozen.className = prompt.className;
     if (prompt.value) {
