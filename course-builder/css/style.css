@@ -2338,6 +2338,11 @@ input[type="range"]:focus-visible::-moz-range-thumb {
   border: none;
   outline: none;
   background: transparent;
+  /* A textarea now, not an input, so it can wrap — grown by hand to its
+     content (see buildAutoGrowPrompt()), never hand-resized, never
+     scrolled. */
+  resize: none;
+  overflow: hidden;
   font-family: 'Barlow', sans-serif;
   /* A step up from the 2.4mm header text, not a step up from body copy. */
   font-size: 3.2mm;
@@ -2353,6 +2358,16 @@ input[type="range"]:focus-visible::-moz-range-thumb {
 }
 
 .card-block-heading::placeholder {
+  font-weight: 400;
+  color: #c8c8c8;
+}
+
+/* Print-frozen heading (see freezeAutoGrowPrompts()): a div, not a
+   textarea, so it sizes to its content with no measurement — same treatment
+   as the frozen list prompt. A div doesn't wrap by default, a textarea
+   does, hence the explicit pre-wrap. */
+div.card-block-heading { white-space: pre-wrap; }
+div.card-block-heading.is-empty {
   font-weight: 400;
   color: #c8c8c8;
 }
