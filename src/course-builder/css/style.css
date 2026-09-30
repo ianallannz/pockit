@@ -4384,7 +4384,7 @@ div.card-block-list-prompt.is-empty { color: #c0c0c0; }
   flex: 1;
   overflow-y: auto;
   margin-top: 6vh;
-  font-size: clamp(17px, 2.3vw, 32px);
+  font-size: clamp(17px, 2.4vw, 44px);
   line-height: 1.6;
   color: #e0e0e0;
 }
