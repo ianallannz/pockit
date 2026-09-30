@@ -8,4 +8,8 @@
 // src/redirects.njk, which paginates over this array.
 export default [
   { slug: "example", url: "https://example.com" },
+  { slug: "handwriting", url: "https://www.scientificamerican.com/article/why-writing-by-hand-is-better-for-memory-and-learning/" },
+  { slug: "alphaschool", url: "https://alpha.school/" },
+  { slug: "alphabootcamp", url: "https://buildcognitiveresonance.substack.com/p/special-report-my-so-called-alpha" },
+  { slug: "sh35", url: "https://www.youtube.com/watch?v=jEOydUQXfl8" },
 ];
