@@ -18,6 +18,7 @@ import * as vaultHandleStore from './storage/vault-handle-store.js';
 import { createSupabaseAdapter } from './storage/supabase-adapter.js';
 import { getSupabaseClient } from './storage/supabase-client.js';
 import { listCourseAccess, inviteToCourse, revokeInvite } from './storage/course-invites.js';
+import { collectShortlinks, findLocalDuplicates, claimShortlink, publishShortlinks } from './storage/shortlinks.js';
 import { isSupabaseConfigured } from './config/supabase-config.js';
 import { getCurrentUser, signInWithEmail, signOut, trySessionRestore, onAuthStateChange } from './auth/auth.js';
 import { positionPopover } from './popover.js';
@@ -1302,6 +1303,9 @@ function updateAccountStatus() {
   const action = document.getElementById('account-status-action');
 
   const user = getCurrentUser();
+  // Short-URL publishing needs sign-in (the table, not the course storage,
+  // is what goes live) — same enable/disable shape as the Cloud row.
+  document.getElementById('shortlinksPublishBtn').disabled = !user;
   if (user) {
     label.textContent = `Signed in: ${user.email}`;
     action.disabled = false;
@@ -1827,6 +1831,48 @@ async function refreshFromCloud() {
     storageConflictAnchor('storageModeCloud'),
     'Use cloud data'
   );
+}
+
+// ── Publish short URLs ───────────────────────────────────────
+// Pushes every QR block's { slug, url } into the Supabase `shortlinks`
+// table (see storage/shortlinks.js), where pockit.works/<slug> resolves
+// them live with no rebuild. Backend-agnostic by construction — reads the
+// in-memory snapshot, so browser, vault and cloud courses all publish the
+// same way; only sign-in is required. Also prunes owned rows the courses
+// no longer use, and reports slugs owned by someone else (first claim
+// wins) plus slugs pointing at two URLs (first published) instead of
+// silently dropping either.
+async function publishAllShortlinks() {
+  const statusEl = document.getElementById('shortlinksPublishStatus');
+  const user = getCurrentUser();
+  const client = await getSupabaseClient();
+  if (!user || !client) {
+    statusEl.textContent = 'Sign in to publish short URLs.';
+    return;
+  }
+
+  const entries = collectShortlinks(snapshot());
+  if (!entries.length) {
+    statusEl.textContent = 'No short URLs in your courses yet — add one to a QR block first.';
+    return;
+  }
+
+  statusEl.textContent = `Publishing ${entries.length} short URL${entries.length === 1 ? '' : 's'}…`;
+  try {
+    const { published, removed, conflicts } = await publishShortlinks(client, user.id, entries);
+    const parts = [`Published ${published} short URL${published === 1 ? '' : 's'}.`];
+    if (removed) parts.push(`Removed ${removed} no longer used.`);
+    for (const { slug } of findLocalDuplicates(snapshot())) {
+      parts.push(`“${slug}” points at two URLs — published the first.`);
+    }
+    for (const slug of conflicts) {
+      parts.push(`“${slug}” is already claimed by someone else.`);
+    }
+    statusEl.textContent = parts.join(' ');
+  } catch (error) {
+    console.error('[course-builder] shortlink publish failed', error);
+    statusEl.textContent = `Could not publish (${error.message}). Nothing was changed.`;
+  }
 }
 
 // Back to local storage — flushes whatever was pending against the
@@ -2628,7 +2674,10 @@ function openLinkEditor(block, anchor) {
   slug.value = block.slug || '';
   title.value = block.title || '';
   description.value = block.body || '';
-  setLinkNote('');
+  // Short URLs go live through the Supabase table (see shortlinks.js), not
+  // the course storage — but only while signed in. Say so up front rather
+  // than letting a slug sit dormant with no explanation.
+  setLinkNote(block.slug && !getCurrentUser() ? 'Sign in to activate this short URL.' : '');
 
   backdrop.hidden = false;
   editor.hidden = false;
@@ -2651,13 +2700,48 @@ function dismissLinkEditor() {
   document.getElementById('link-editor-backdrop').hidden = true;
 }
 
-function closeLinkEditor() {
+async function closeLinkEditor() {
   const block = editingLink;
-  dismissLinkEditor();
-  if (!block) return;
+  if (!block) {
+    dismissLinkEditor();
+    return;
+  }
 
-  block.url = document.getElementById('linkUrl').value.trim();
-  block.slug = sanitizeSlug(document.getElementById('linkSlug').value);
+  const url = document.getElementById('linkUrl').value.trim();
+  const slug = sanitizeSlug(document.getElementById('linkSlug').value);
+
+  // Claim the short URL before committing: a taken or reserved slug keeps
+  // the popover open with an explanation rather than silently saving a slug
+  // that will never resolve. Backend-agnostic (see shortlinks.js) — works
+  // from browser, vault or cloud storage alike; only sign-in is required.
+  // A network failure dismisses normally (Publish short URLs retries
+  // later) rather than trapping the user in the editor.
+  if (slug) {
+    const user = getCurrentUser();
+    const client = await getSupabaseClient();
+    if (user && client) {
+      setLinkNote('Activating short URL…');
+      let result = null;
+      try {
+        result = await claimShortlink(client, user.id, slug, url);
+      } catch (error) {
+        console.error('[course-builder] shortlink claim failed', error);
+      }
+      if (result && !result.ok && (result.reason === 'claimed' || result.reason === 'reserved')) {
+        setLinkNote(
+          result.reason === 'claimed'
+            ? `“${slug}” is already taken — try another short link.`
+            : `“${slug}” is reserved — try another short link.`,
+          true
+        );
+        return;
+      }
+    }
+  }
+
+  dismissLinkEditor();
+  block.url = url;
+  block.slug = slug;
   block.title = document.getElementById('linkTitle').value.trim();
   block.body = document.getElementById('linkDescription').value.trim();
   save();
@@ -4267,6 +4351,7 @@ document.getElementById('storageModeLocal').addEventListener('click', () => swit
 document.getElementById('storageModeVault').addEventListener('click', () => switchStorageMode('vault'));
 document.getElementById('storageModeCloud').addEventListener('click', () => switchStorageMode('cloud'));
 document.getElementById('cloudRefreshBtn').addEventListener('click', () => { void refreshFromCloud(); });
+document.getElementById('shortlinksPublishBtn').addEventListener('click', () => { void publishAllShortlinks(); });
 document.getElementById('profile-avatar-btn').addEventListener('click', () => document.getElementById('profileAvatarPicker').click());
 // #profile-avatar-note is a <span>, not a real form control — disabled
 // doesn't apply to it the way it does to #profile-avatar-btn above, so it

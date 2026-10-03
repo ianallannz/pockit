@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting… — Pockit</title>
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon-256x256.png">
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; min-height: 100vh;
+      align-items: center; justify-content: center; margin: 0; color: #111; }
+    main { text-align: center; padding: 24px; }
+    a { color: #00bb27; }
+  </style>
+</head>
+<body>
+  <!-- Live short-URL resolver. GitHub Pages serves this page for any unknown
+       path, so pockit.works/<slug> lands here (real pages never do — they
+       resolve normally first). The slug is looked up in the Supabase
+       `shortlinks` table (see supabase/shortlinks.sql), which the
+       course-builder publishes QR-block slugs into — no rebuild needed per
+       slug, unlike the static entries in src/_data/shortlinks.js. -->
+  <main>
+    <p id="status">Checking short link…</p>
+    <p id="fallback" hidden>Unknown short link “<span id="slug"></span>”.
+      <a href="/">Back to Pockit home</a></p>
+  </main>
+  <script type="module">
+    import { supabaseUrl, supabaseAnonKey } from '/course-builder/js/config/supabase-config.js';
+
+    // A slug never contains a slash — anything deeper is not a short link.
+    const segments = location.pathname.split('/').filter(Boolean);
+    const slug = segments.length === 1 ? segments[0] : '';
+
+    async function resolve() {
+      // No Supabase project (or no slug): nothing to look up.
+      if (!slug || !supabaseUrl || !supabaseAnonKey) return false;
+      const endpoint = `${supabaseUrl}/rest/v1/shortlinks?slug=eq.${encodeURIComponent(slug)}&select=url`;
+      const response = await fetch(endpoint, {
+        headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` },
+      });
+      if (!response.ok) return false;
+      const rows = await response.json().catch(() => []);
+      if (rows.length && rows[0].url) {
+        location.replace(rows[0].url);
+        return true;
+      }
+      return false;
+    }
+
+    resolve().catch(() => false).then(found => {
+      // Redirecting away: leave the "checking" text up rather than
+      // flashing a not-found that was never true.
+      if (found) return;
+      document.getElementById('status').hidden = true;
+      document.getElementById('slug').textContent = slug || location.pathname;
+      document.getElementById('fallback').hidden = false;
+      document.title = 'Link not found — Pockit';
+    });
+  </script>
+</body>
+</html>
