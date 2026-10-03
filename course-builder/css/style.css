@@ -412,7 +412,8 @@ body.sidebar-open #sidebar-backdrop {
    shares it too — same "full-width, neutral, no invite/revoke needed" weight. */
 #account-status-action,
 #share-preview-btn,
-#cloudRefreshBtn {
+#cloudRefreshBtn,
+#shortlinksPublishBtn {
   width: 100%;
   height: 32px;
   display: flex;
@@ -430,7 +431,39 @@ body.sidebar-open #sidebar-backdrop {
 
 #account-status-action:hover,
 #share-preview-btn:hover,
-#cloudRefreshBtn:hover { background: #fff; border: 1px solid var(--brand-green); }
+#cloudRefreshBtn:hover,
+#shortlinksPublishBtn:hover { background: #fff; border: 1px solid var(--brand-green); }
+
+#shortlinksPublishBtn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Publish-short-URLs block in the profile panel — same shape as the
+   #account-status identity block below it: bordered section, full-width
+   button, one-line detail text. */
+#shortlinks-publish {
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#shortlinks-publish h2 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+#shortlinksPublishStatus {
+  font-size: 9px;
+  color: var(--label-color);
+  line-height: 1.4;
+}
+
+#shortlinksPublishStatus:empty { display: none; }
 
 #cloudRefreshBtn:disabled {
   cursor: default;

@@ -632,6 +632,17 @@
     </div>
   </div>
 
+  <!-- Short URLs for QR blocks — published into the Supabase `shortlinks`
+       table (see js/storage/shortlinks.js), resolving live through 404.njk
+       with no rebuild. Backend-agnostic: works from browser, vault or cloud
+       storage alike — only sign-in is required, since the table (not the
+       course storage) is what goes live. See publishAllShortlinks(). -->
+  <div id="shortlinks-publish">
+    <h2>Short URLs</h2>
+    <button id="shortlinksPublishBtn" type="button">Publish short URLs</button>
+    <small id="shortlinksPublishStatus"></small>
+  </div>
+
   <!-- Identity only — always shown (unlike #storage-options' vault row,
        sign-in has no browser-support gap to feature-detect around, just a
        "not configured yet" state while no Supabase project exists — see
