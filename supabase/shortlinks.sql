@@ -27,8 +27,10 @@ create table if not exists shortlinks (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   -- Mirrors course-builder.js's sanitizeSlug(): lowercase, hyphens for
-  -- spaces, nothing outside a-z0-9-_.
-  constraint shortlinks_slug_format check (slug ~ '^[a-z0-9-_]+$')
+  -- spaces, nothing outside a-z0-9-_. The hyphen sits LAST deliberately:
+  -- mid-class it reads as a range operator, and Postgres rejected the
+  -- mid-class form with "invalid character range", 400ing every upsert.
+  constraint shortlinks_slug_format check (slug ~ '^[a-z0-9_-]+$')
 );
 
 alter table shortlinks enable row level security;
