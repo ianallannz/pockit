@@ -33,6 +33,69 @@ export const BLOCK_TYPES = [
     icon: '<path d="M5 7h14M5 12h14M5 17h9"/>',
   },
   {
+    id: 'image', label: 'Image', defaultRows: 5, minRows: MIN_BLOCK_ROWS,
+    editor: 'image', placeholder: 'Drop an image, or click to choose',
+    format: { body: null, attrs: ['src', 'alt', 'fit'] },
+    icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/>'
+        + '<path d="M21 16l-5-5-6 6-2-2-5 4"/>',
+  },
+  {
+    // Not boxed like Reflection (no inset container): a plain markdown table
+    // with its own grid rules — one header row plus data rows, every cell
+    // its own Text-like markdown field (see buildTableEditor()). Stored as
+    // markdown table syntax in block.body,
+    // not structured attrs, so it reads as prose in vault files and cloud
+    // rows alike. minN/maxN/defaultN count DATA rows (the header is extra);
+    // minCols/maxCols/defaultCols count columns — the same stepper
+    // vocabulary Matrix already uses — except rows, which are uncapped
+    // (maxN: Infinity): the row-height accounting already refuses inserts
+    // the card has no room for, so an arbitrary ceiling would only lie.
+    id: 'table', label: 'Table', defaultRows: 1 + 3, minRows: 1 + 1,
+    minN: 1, maxN: Infinity, defaultN: 3, minCols: 1, maxCols: 5, defaultCols: 3,
+    // Free resize: the box may be dragged smaller than its content (see
+    // makeResizable()), clipping the overflow — the author, not the row
+    // count, decides the box size. Moves between cards stay content-aware
+    // (see minRowsFor()), only the resize floor is lifted.
+    freeResize: true,
+    editor: 'table', placeholder: 'Add text…',
+    // Column widths ride the fence line as relative weights
+    // (widths="2|1|1"), not per-column units — fractions of whatever the
+    // card width currently is, so they survive card-size changes. Omitted
+    // when uniform, so untouched tables keep a bare `::: table` fence.
+    format: {
+      body: 'body', attrs: [],
+      toAttrs(block) {
+        const pairs = [];
+        if (Array.isArray(block.widths) && block.widths.length
+            && !block.widths.every(w => w === block.widths[0])) {
+          pairs.push(['widths', block.widths.join('|')]);
+        }
+        if (Array.isArray(block.align) && block.align.length
+            && block.align.some(a => a !== 'left')) {
+          pairs.push(['align', block.align.join('|')]);
+        }
+        return pairs;
+      },
+      fromAttrs(attrs, block) {
+        const consumed = [];
+        if (attrs.widths !== undefined) {
+          const parts = String(attrs.widths).split('|').map(Number).filter(n => Number.isFinite(n) && n > 0);
+          if (parts.length) block.widths = parts;
+          consumed.push('widths');
+        }
+        if (attrs.align !== undefined) {
+          // Invalid tokens become 'left' rather than filtering out — dropping
+          // them would shift every later column's alignment sideways.
+          const parts = String(attrs.align).split('|').map(a => TABLE_ALIGNMENTS.includes(a) ? a : 'left');
+          if (parts.length) block.align = parts;
+          consumed.push('align');
+        }
+        return consumed;
+      },
+    },
+    icon: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9.5h18M9 9.5V20M15 9.5V20"/>',
+  },
+  {
     id: 'qr', label: 'Link (QR)', defaultRows: 3, minRows: MIN_BLOCK_ROWS,
     editor: 'link', placeholder: 'Add a link…',
     format: { body: 'body', attrs: ['url', 'slug', 'title'] },
@@ -54,11 +117,10 @@ export const BLOCK_TYPES = [
         + '<path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/>',
   },
   {
-    id: 'image', label: 'Image', defaultRows: 5, minRows: MIN_BLOCK_ROWS,
-    editor: 'image', placeholder: 'Drop an image, or click to choose',
-    format: { body: null, attrs: ['src', 'alt', 'fit'] },
-    icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/>'
-        + '<path d="M21 16l-5-5-6 6-2-2-5 4"/>',
+    id: 'task', label: 'Activity', defaultRows: 4, minRows: MIN_BLOCK_ROWS,
+    boxed: true, editor: 'markdown', placeholder: 'Describe the task…',
+    format: { body: 'body', attrs: [] },
+    icon: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/>',
   },
   {
     // Flush like Key Idea/Task (no outer margin) — not boxed, since the
@@ -70,19 +132,15 @@ export const BLOCK_TYPES = [
     icon: '<path d="M8 7c-1.7 0-3 1.3-3 3v4"/><path d="M16 7c-1.7 0-3 1.3-3 3v4"/>',
   },
   {
-    id: 'task', label: 'Task', defaultRows: 4, minRows: MIN_BLOCK_ROWS,
-    boxed: true, editor: 'markdown', placeholder: 'Describe the task…',
-    format: { body: 'body', attrs: [] },
-    icon: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/>',
-  },
-  {
-    id: 'reflection', label: 'Reflection', defaultRows: 5, minRows: MIN_BLOCK_ROWS,
+    id: 'reflection', label: 'Question', defaultRows: 5, minRows: MIN_BLOCK_ROWS,
+    group: 'reflection',
     boxed: true, editor: 'plain', placeholder: 'Write a question…',
     format: { body: 'body', attrs: [] },
     icon: '<path d="M20 5H4v10h5l4 4v-4h7z"/><path d="M9 10h6"/>',
   },
   {
     id: 'rating', label: 'Rating', defaultRows: 4, minRows: MIN_BLOCK_ROWS,
+    group: 'reflection',
     boxed: true, editor: 'rating', placeholder: 'Write a question that requests a rating…',
     format: { body: 'body', attrs: ['lowLabel', 'highLabel'] },
     icon: '<path d="M4 16a8 8 0 0 1 16 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1"/>',
@@ -96,7 +154,7 @@ export const BLOCK_TYPES = [
     // `n` instead.
   {
     id: 'list', label: 'List', defaultRows: 1 + 3, minRows: 1 + 2,
-    minN: 2, maxN: 5, defaultN: 3,
+    minN: 2, maxN: 5, defaultN: 3, group: 'reflection',
     boxed: true, editor: 'list', placeholder: 'List the items…',
     format: { body: 'body', attrs: ['n'] },
     icon: '<circle cx="5" cy="6" r="1.4"/><path d="M9 6h11"/>'
@@ -118,6 +176,7 @@ export const BLOCK_TYPES = [
     // the student to fill in, same as those two.
     id: 'matrix', label: 'Matrix', defaultRows: 1 + 1 + 3 + 1, minRows: 1 + 1 + 3 + 1,
     minN: 3, maxN: 5, defaultN: 3, minCols: 1, maxCols: 2, defaultCols: 1,
+    group: 'reflection',
     boxed: true, hideIcon: true, editor: 'matrix', placeholder: 'Describe this list and ranking task…',
     format: {
       body: 'body', attrs: ['entries', 'itemHeading'],
@@ -175,4 +234,204 @@ export function matrixEntryCount(block) {
 export function matrixColumns(block) {
   if (!block.columns || !block.columns.length) block.columns = [{ caption: '' }];
   return block.columns;
+}
+
+// ── Table grid ─────────────────────────────────────────────────
+// The Table block keeps its whole grid as markdown table syntax in
+// block.body (not structured attrs), so vault files and cloud rows carry it
+// as readable prose — parse/serialize here are the only structural
+// interface, used by the editor, the steppers and the tests alike. Cell
+// text is opaque: pipes typed inside a cell would resplit the row on the
+// next parse (same documented trade-off as Matrix's `cols` join above),
+// so cells are plain prose, not nested tables.
+const TABLE_DEFAULT_ROWS = 3;
+const TABLE_DEFAULT_COLS = 3;
+
+// Newlines can't survive raw inside a line-oriented markdown table — a
+// multi-bullet cell would resplit into extra rows on the next parse.
+// Cells are therefore escaped on the way out (\ → \\, newline → \n as a
+// literal two-character sequence) and restored on the way in, so the body
+// text stays one line per table row no matter what a cell holds. A single
+// regex pass each way keeps `\\n` (escaped backslash + n) distinct from an
+// escaped newline.
+function escapeCellText(text) {
+  return String(text ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n');
+}
+
+function unescapeCellText(text) {
+  return String(text ?? '').replace(/\\\\|\\n/g, match => (match === '\\\\' ? '\\' : '\n'));
+}
+
+function splitTableRow(line) {
+  let cells = String(line || '').trim();
+  if (cells.startsWith('|')) cells = cells.slice(1);
+  if (cells.endsWith('|')) cells = cells.slice(0, -1);
+  return cells.split('|').map(cell => unescapeCellText(cell.trim()));
+}
+
+function isDelimiterRow(cells) {
+  return cells.length > 0 && cells.every(cell => /^:?-+:?$/.test(cell));
+}
+
+// Tolerates anything: blank lines dropped, uneven rows padded, a missing
+// delimiter row treated as "no header yet" (blank header), and a body with
+// no pipes at all read as one single-column row per line. Empty body means
+// a blank default grid, not zero columns — steppers and the editor always
+// have a real grid to work on.
+export function parseTableBody(body) {
+  const lines = String(body || '').split('\n').map(line => line.trim()).filter(Boolean);
+  if (!lines.length) {
+    return {
+      header: Array(TABLE_DEFAULT_COLS).fill(''),
+      rows: Array.from({ length: TABLE_DEFAULT_ROWS }, () => Array(TABLE_DEFAULT_COLS).fill('')),
+    };
+  }
+  const parsed = lines.map(splitTableRow);
+  let header;
+  let rows;
+  if (parsed.length > 1 && isDelimiterRow(parsed[1])) {
+    header = parsed[0];
+    rows = parsed.slice(2);
+  } else {
+    header = [];
+    rows = parsed;
+  }
+  // Padded to the actual widest row (never the default width — a 1-column
+  // table the user shrank on purpose must stay 1 column, not spring back).
+  const width = Math.max(1, header.length, ...rows.map(r => r.length));
+  const pad = row => [...row, ...Array(Math.max(0, width - row.length)).fill('')];
+  return { header: pad(header), rows: rows.map(pad) };
+}
+
+export function serializeTableBody({ header, rows }) {
+  const width = Math.max(1, header.length, ...rows.map(r => r.length));
+  const pad = row => [...row, ...Array(Math.max(0, width - row.length)).fill('')];
+  const line = row => `| ${pad(row).map(escapeCellText).join(' | ')} |`;
+  const delimiter = `| ${Array(width).fill('---').join(' | ')} |`;
+  return [line(header), delimiter, ...rows.map(line)].join('\n');
+}
+
+export function tableGrid(block) {
+  return parseTableBody(block.body);
+}
+
+export function tableRowCount(block) {
+  const type = blockType('table');
+  return Math.min(type.maxN, Math.max(type.minN, tableGrid(block).rows.length));
+}
+
+export function tableColCount(block) {
+  const type = blockType('table');
+  return Math.min(type.maxCols, Math.max(type.minCols, tableGrid(block).header.length));
+}
+
+// Grows with blank cells, shrinks off the end — the first row/column (and
+// whatever's typed into them) is never the one removed. Writes straight
+// back to block.body: the markdown text is the single source of truth.
+export function setTableSize(block, rowCount, colCount) {
+  const grid = clampedTableGrid(block);
+  const resizeRow = row => [...row.slice(0, colCount), ...Array(Math.max(0, colCount - row.length)).fill('')];
+  const blankRow = () => Array(colCount).fill('');
+  const rows = [...grid.rows.slice(0, rowCount).map(resizeRow), ...Array(Math.max(0, rowCount - grid.rows.length)).fill(null).map(blankRow)];
+  block.body = serializeTableBody({ header: resizeRow(grid.header), rows });
+  tableColWidths(block, colCount);
+  tableColAligns(block, colCount);
+}
+
+// Per-column text alignment, one token per column — same repair contract
+// as widths above (overlong trims, short fills with 'left', garbage reads
+// as 'left' positionally). Headers and cells alike default to left.
+export const TABLE_ALIGNMENTS = ['left', 'center', 'right'];
+
+export function nextTableAlign(align) {
+  const i = TABLE_ALIGNMENTS.indexOf(align);
+  return TABLE_ALIGNMENTS[(i + 1) % TABLE_ALIGNMENTS.length];
+}
+
+export function tableColAligns(block, colCount) {
+  const saved = Array.isArray(block.align)
+    ? block.align.map(a => (TABLE_ALIGNMENTS.includes(a) ? a : 'left'))
+    : [];
+  const aligns = saved.slice(0, colCount);
+  while (aligns.length < colCount) aligns.push('left');
+  block.align = aligns;
+  return aligns;
+}
+
+// The grid as the editor actually shows it: parsed, then cut to the type's
+// own row/column limits and normalized rectangular. Positional edits below
+// all go through here, so what they change is exactly what's on screen —
+// never silently more (an oversized hand-edited body normalizes on the
+// first structural edit, matching the display).
+function clampedTableGrid(block) {
+  const grid = tableGrid(block);
+  const cols = tableColCount(block);
+  const norm = row => [...row.slice(0, cols), ...Array(Math.max(0, cols - row.length)).fill('')];
+  return { header: norm(grid.header), rows: grid.rows.slice(0, tableRowCount(block)).map(norm) };
+}
+
+// Positional edits for the hover edge controls (see buildTableEditor()):
+// insert lands a blank row/column AT the index, remove takes exactly the
+// indexed one. Out-of-range indices clamp (insert) or no-op (remove);
+// min/max gating lives with the caller, next to the row-height accounting.
+export function insertTableRowAt(block, index) {
+  const grid = clampedTableGrid(block);
+  const at = Math.max(0, Math.min(index, grid.rows.length));
+  grid.rows.splice(at, 0, Array(grid.header.length).fill(''));
+  block.body = serializeTableBody(grid);
+}
+
+export function removeTableRowAt(block, index) {
+  const grid = clampedTableGrid(block);
+  if (index < 0 || index >= grid.rows.length) return;
+  grid.rows.splice(index, 1);
+  block.body = serializeTableBody(grid);
+}
+
+export function insertTableColAt(block, index) {
+  const grid = clampedTableGrid(block);
+  const at = Math.max(0, Math.min(index, grid.header.length));
+  grid.header.splice(at, 0, '');
+  grid.rows.forEach(row => row.splice(at, 0, ''));
+  // The newcomer takes the average width (so existing columns don't jump)
+  // and left alignment, matching a fresh table.
+  const widths = tableColWidths(block, grid.header.length - 1);
+  widths.splice(at, 0, widths.reduce((a, b) => a + b, 0) / widths.length);
+  block.widths = widths;
+  const aligns = tableColAligns(block, grid.header.length - 1);
+  aligns.splice(at, 0, 'left');
+  block.align = aligns;
+  block.body = serializeTableBody(grid);
+}
+
+export function removeTableColAt(block, index) {
+  const grid = clampedTableGrid(block);
+  if (index < 0 || index >= grid.header.length) return;
+  grid.header.splice(index, 1);
+  grid.rows.forEach(row => row.splice(index, 1));
+  const widths = tableColWidths(block, grid.header.length + 1);
+  widths.splice(index, 1);
+  block.widths = widths;
+  const aligns = tableColAligns(block, grid.header.length + 1);
+  aligns.splice(index, 1);
+  block.align = aligns;
+  block.body = serializeTableBody(grid);
+}
+
+// Column width weights, one per column — relative units (fractions of the
+// table width), not mm, so they track card-size changes. Repairs like
+// matrixColumns: overlong arrays trim, short ones fill with the average
+// (or 1), garbage falls back to uniform. Written back, the same repair
+// contract — invisible in storage while uniform (see toAttrs above).
+export function tableColWidths(block, colCount) {
+  const saved = Array.isArray(block.widths)
+    ? block.widths.filter(n => Number.isFinite(n) && n > 0)
+    : [];
+  const widths = saved.slice(0, colCount);
+  const fill = saved.length
+    ? saved.reduce((a, b) => a + b, 0) / saved.length
+    : 1;
+  while (widths.length < colCount) widths.push(fill);
+  block.widths = widths;
+  return widths;
 }
