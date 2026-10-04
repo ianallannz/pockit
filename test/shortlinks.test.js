@@ -34,6 +34,7 @@ describe('isReservedSlug', () => {
   it('blocks real site paths', () => {
     assert.equal(isReservedSlug('course-builder'), true);
     assert.equal(isReservedSlug('example'), true);
+    assert.equal(isReservedSlug('qr'), true);
     assert.equal(isReservedSlug('sh35'), false);
   });
 });

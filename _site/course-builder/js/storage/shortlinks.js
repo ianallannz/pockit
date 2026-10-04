@@ -27,7 +27,7 @@ function unwrap({ data, error }) {
 // claim time (not in the DB, which can't know the site's routes).
 const RESERVED_SLUGS = new Set([
   'about', 'course', 'course-builder', 'css', 'docs', 'example',
-  'images', 'js', 'note', 'note-builder', 'thanks',
+  'images', 'js', 'note', 'note-builder', 'qr', 'thanks',
 ]);
 
 export function isReservedSlug(slug) {

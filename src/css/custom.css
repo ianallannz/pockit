@@ -137,6 +137,27 @@ body {
   color: #00BB27;
 }
 
+/* QR scanner icon link, left of About — inline SVG in the same filled-rect
+   QR language as the homepage hero motif, sized in em so it scales from
+   the desktop bar into the 22px mobile overlay type alike. currentColor
+   follows the link color (including the green hover above); the green
+   selected state only ever applies here, on /qr/. */
+.site-nav-qr {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+}
+
+.site-nav-qr svg {
+  width: 1.35em;
+  height: 1.35em;
+  display: block;
+}
+
+.site-nav-qr.is-active {
+  color: #00BB27;
+}
+
 /* Note / Book — live pages, but not ready to promote yet. Kept in the
    nav (rather than removed) since they signal the wider venture, just
    muted grey with a trailing asterisk instead of the usual green

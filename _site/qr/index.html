@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan a QR code — Pockit</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon-256x256.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Inter:wght@400;600;700&family=Sora:wght@400;600;700;800&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/custom.css">
+    <meta name="theme-color" content="#F4F4F4">
+    <!-- SEO basics -->
+    <meta name="description" content="Point your camera at a QR code to go straight to the link.">
+    <meta name="keywords" content="Pockit, books, mini, smartphone-sized, digital addiction, study, notes, courses">
+    <meta name="author" content="Ian Allan">
+    <!-- Open Graph (Facebook, LinkedIn, etc.) -->
+    <meta property="og:title" content="Scan a QR code — Pockit">
+    <meta property="og:description" content="Point your camera at a QR code to go straight to the link.">
+    <meta property="og:image" content="https://www.pockit.works/images/pockit-social-share.jpg">
+    <meta property="og:url" content="https://www.pockit.works">
+    <meta property="og:type" content="website">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Scan a QR code — Pockit">
+    <meta name="twitter:description" content="Point your camera at a QR code to go straight to the link.">
+    <meta name="twitter:image" content="https://www.pockit.works/images/pockit-social-share.jpg">
+
+</head>
+
+<body class="qr">
+    <nav class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-logo" href="/" aria-label="Pockit home">
+      <img src="/images/pockit-logo.png" alt="Pockit">
+    </a>
+
+    <ul class="site-nav-links site-nav-links--left">
+      <li><a href="/course/" class="">Course</a></li>
+      <li><a class="site-nav-link--soon ">Note*</a></li>
+      <li><a class="site-nav-link--soon ">Book*</a></li>
+    </ul>
+
+    <span class="site-nav-soon-note">*Full reveal coming soon</span>
+
+    <ul class="site-nav-links site-nav-links--right">
+      <!-- QR scanner icon — inline SVG (no icon font), same filled-rect
+           QR language as the homepage hero motif. Green when active. -->
+      <li><a href="/qr/" class="site-nav-qr is-active" aria-label="QR scanner" title="QR scanner"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" fill-rule="evenodd"><path d="M2 2h7v7H2zM4 4h3v3H4zM15 2h7v7h-7zM17 4h3v3h-3zM2 15h7v7H2zM4 17h3v3H4zM11 4h2v2h-2zM14 3h2v2h-2zM11 8h2v2h-2zM13 11h2v2h-2zM17 12h2v2h-2zM20 14h2v2h-2zM11 16h2v2h-2zM15 18h2v2h-2zM19 19h2v2h-2zM12 19h2v2h-2z"/></svg></a></li>
+      <li><a href="/about/" class="">About</a></li>
+      <li><a href="#modal-contact" data-modal-open="modal-contact">Contact</a></li>
+    </ul>
+
+    <!-- Mobile-only hamburger/close toggle — hidden above the 640px
+         breakpoint, where the two <ul> lists above just render inline
+         as normal. Below it, this button shows instead of them, and
+         toggling body.is-nav-open (see custom.js) turns .site-nav-
+         inner itself into a full-screen overlay showing the SAME
+         lists (see custom.css), rather than duplicating the nav
+         links into separate mobile-only markup. -->
+    <button type="button" class="site-nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span class="site-nav-toggle-bar"></span>
+      <span class="site-nav-toggle-bar"></span>
+      <span class="site-nav-toggle-bar"></span>
+    </button>
+  </div>
+</nav>
+
+    <style>
+  /* Scanner content only — the nav/footer come from layouts/base.njk.
+     Marketing-site language: light background, Sora, flat brand-green CTA
+     that inverts on hover. The camera view itself stays black. */
+  body.qr { background: #F4F4F4; }
+  .qr-scanner {
+    /* Same dotted grid as the /course hero (see .hero in
+       src/css/custom.css): #FAFAFA base, #e5e5e5 dots on a 24px grid.
+       Full-bleed — the inner wrapper below holds the content width. */
+    background-color: #FAFAFA;
+    background-image: radial-gradient(circle, #e5e5e5 1.2px, transparent 1.2px);
+    background-size: 24px 24px;
+    /* min- (not fixed) height, so small screens can still grow past it. */
+    min-height: 80vh;
+    padding: 28px 16px 8px;
+    /* Vertically centre the content block within the 80vh. */
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qr-scanner-inner {
+    /* Same content width as the rest of the marketing site. */
+    max-width: 1100px; width: 100%; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+    align-items: center;
+  }
+  /* Same text treatment as the /course hero (.hero-text): left-aligned
+     column, 36px heading, 1.1em subhead capped at 460px, white text
+     outline so both stay legible over the dot grid. */
+  .qr-intro {
+    display: flex; flex-direction: column; align-items: flex-start;
+    text-align: left; gap: 14px;
+    text-shadow:
+      -1px -1px 0 #fff,
+       1px -1px 0 #fff,
+      -1px  1px 0 #fff,
+       1px  1px 0 #fff;
+  }
+  .qr-intro h1 { font-size: 36px; margin: 0; color: #111; }
+  .qr-intro p { margin: 0; font-size: 1.1em; line-height: 1.4; color: #333;
+    max-width: 460px; }
+  .qr-camera {
+    display: flex; flex-direction: column; align-items: stretch;
+  }
+  /* Status left, Mirror right on one row below the camera. */
+  .qr-camera-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; width: 100%; max-width: 520px;
+  }
+  /* No vertical margin here: the row's own centering would count it as
+     part of the text's height and push the button down to match. */
+  .qr-camera-row #status { flex: 1; min-width: 0; margin: 0; text-align: left; }
+  .qr-camera-row #mirrorBtn { flex-shrink: 0; }
+  #viewfinder {
+    position: relative; width: 100%; max-width: 520px; aspect-ratio: 1;
+    margin: 16px 0; border-radius: 12px; overflow: hidden; background: #000;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.08);
+  }
+  /* Camera-off placeholder: same footprint as the viewfinder, light box
+     outline with the same corner marks inside, so the space reads as
+     "camera goes here" before Start is pressed. */
+  #camera-placeholder {
+    position: relative; width: 100%; max-width: 520px; aspect-ratio: 1;
+    margin: 16px 0; border-radius: 12px; border: 2px solid #ddd;
+    background: rgba(255,255,255,0.5);
+  }
+  #camera-placeholder[hidden] { display: none; }
+  /* Grey corners here (not brand green) — the camera isn't live yet. */
+  #camera-placeholder .corner { border-color: #bbb; }
+  @media (max-width: 700px) {
+    .qr-scanner-inner { grid-template-columns: 1fr; gap: 8px; }
+    #viewfinder { margin: 8px auto; }
+  }
+  #viewfinder video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  /* Mirrored preview — visual only, detection reads the raw stream either
+     way. Auto-applied for front cameras (see below); the toggle covers
+     anything the browser misreports. */
+  #viewfinder video.is-mirrored { transform: scaleX(-1); }
+  #mirrorBtn[hidden] { display: none; }
+  #mirrorBtn {
+    margin: 0 0 4px; padding: 6px 12px; font-size: 12px;
+    font-family: inherit; color: #666; background: transparent;
+    border: 1px solid #ccc; border-radius: 999px; cursor: pointer;
+  }
+  #mirrorBtn:hover { border-color: var(--brand-green); color: #111; }
+  #mirrorBtn.is-on { color: var(--brand-green); border-color: var(--brand-green); }
+  /* Corner marks only — no full box, so the camera view stays clear.
+     Shared by the live viewfinder and the camera-off placeholder. */
+  #viewfinder .corner, #camera-placeholder .corner {
+    position: absolute; width: 36px; height: 36px;
+    border: 3px solid var(--brand-green); }
+  #viewfinder .tl, #camera-placeholder .tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+  #viewfinder .tr, #camera-placeholder .tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+  #viewfinder .bl, #camera-placeholder .bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+  #viewfinder .br, #camera-placeholder .br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+  /* Same button language as the marketing .hero-cta: flat green, soft
+     shadow, transparent border reserved so hover inverts without shifting
+     size. Taller touch target for a camera-retry button. */
+  #startBtn {
+    margin: 8px 0; min-height: 48px; padding: 0 28px;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
+    font-family: inherit; color: #fff; background: var(--brand-green);
+    border: 1px solid transparent; border-radius: 6px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.08);
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  #startBtn:hover { background: #fff; color: #111; border-color: var(--brand-green); }
+  #startBtn:disabled { opacity: 0.5; cursor: default; }
+  #startBtn[hidden] { display: none; }
+  /* Stop swaps in for Start while the camera runs — the outline treatment
+     from the marketing button hover state: white fill, green outline. */
+  #stopBtn {
+    margin: 8px 0; min-height: 48px; padding: 0 28px;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
+    font-family: inherit; color: #111; background: #fff;
+    border: 1px solid var(--brand-green); border-radius: 6px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.08);
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  #stopBtn:hover { background: var(--brand-green); color: #fff; }
+  #stopBtn[hidden] { display: none; }
+  #status { min-height: 24px; margin: 4px 0 24px; font-size: 13px;
+    color: #666; }
+  #status.is-error { color: #b00020; }
+</style>
+<main class="qr-scanner">
+  <!-- Point-and-go QR reader: uses the device camera, and the moment a QR
+       code holding a link is recognised it navigates straight there — no
+       tap-to-open step. Native BarcodeDetector where available (Chrome,
+       Edge, recent Safari); jsQR fallback elsewhere. -->
+  <div class="qr-scanner-inner">
+    <div class="qr-intro">
+      <h1>Pockit Course Scanner</h1>
+      <p>This QR code scanner allows you to <strong>scan the QR codes found in your Pockit Course</strong> to open the links directly on your laptop.</p>
+      <button id="startBtn" type="button">Start camera</button>
+      <button id="stopBtn" type="button" hidden>Stop camera</button>
+    </div>
+    <div class="qr-camera">
+    <div id="viewfinder" hidden>
+      <video id="video" playsinline muted></video>
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+    </div>
+    <div id="camera-placeholder" aria-hidden="true">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+    </div>
+      <div class="qr-camera-row">
+        <p id="status"></p>
+        <button id="mirrorBtn" type="button" hidden>Mirror</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  const video = document.getElementById('video');
+  const startBtn = document.getElementById('startBtn');
+  const statusEl = document.getElementById('status');
+  const viewfinder = document.getElementById('viewfinder');
+  let stream = null;
+  let stopped = false;
+
+  function setStatus(message, isError = false) {
+    statusEl.textContent = message;
+    statusEl.classList.toggle('is-error', isError);
+  }
+
+  // Only http(s) targets ever auto-navigate — never javascript:, data: or
+  // any other scheme a hostile code could carry.
+  function safeTarget(text) {
+    let url = null;
+    try { url = new URL(text.trim()); } catch { return null; }
+    return (url.protocol === 'http:' || url.protocol === 'https:') ? url.href : null;
+  }
+
+  // Same-tab navigation via assignment (not replace): it pushes a history
+  // entry, so the Back button returns here to the scanner. (window.open is
+  // out — a scan callback has no user gesture behind it, so popup blockers
+  // refuse it.)
+  function go(url) {
+    stopped = true;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    setStatus('Found it — taking you there…');
+    location.assign(url);
+  }
+
+  function onCode(text) {
+    const url = safeTarget(text);
+    if (url) { go(url); return; }
+    // Recognised but not a link: say so briefly, keep scanning.
+    setStatus('That code holds text, not a link — keep aiming at a link code.');
+    setTimeout(() => { if (!stopped) setStatus('Put QR code in front of camera…'); }, 2000);
+  }
+
+  async function loadJsQr() {
+    if (window.jsQR) return true;
+    try {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      return Boolean(window.jsQR);
+    } catch {
+      return false;
+    }
+  }
+
+  async function scanNative(detector) {
+    if (stopped) return;
+    try {
+      const codes = await detector.detect(video);
+      if (codes.length && codes[0].rawValue) { onCode(codes[0].rawValue); return; }
+    } catch { /* transient frame failure — try the next one */ }
+    requestAnimationFrame(() => scanNative(detector));
+  }
+
+  async function scanJsQr() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const tick = () => {
+      if (stopped) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const result = window.jsQR(
+          ctx.getImageData(0, 0, canvas.width, canvas.height).data,
+          canvas.width, canvas.height
+        );
+        if (result && result.data) { onCode(result.data); return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  function stopCamera() {
+    stopped = true;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.removeAttribute('src');
+    video.srcObject = null;
+    viewfinder.hidden = true;
+    document.getElementById('camera-placeholder').hidden = false;
+    document.getElementById('mirrorBtn').hidden = true;
+    document.getElementById('stopBtn').hidden = true;
+    startBtn.hidden = false;
+    startBtn.disabled = false;
+    setStatus('');
+  }
+
+  async function start() {
+    stopped = false;
+    startBtn.disabled = true;
+    setStatus('Opening camera…');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }, audio: false,
+      }).catch(async error => {
+        // Desktop without a rear camera rejects the exact constraint —
+        // retry with whatever camera exists.
+        if (error && error.name === 'OverconstrainedError') {
+          return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+        throw error;
+      });
+    } catch (error) {
+      const denied = error && (error.name === 'NotAllowedError' || error.name === 'SecurityError');
+      setStatus(denied
+        ? 'Camera access was blocked — allow it in the browser prompt and try again.'
+        : 'No camera found on this device.', true);
+      startBtn.disabled = false;
+      return;
+    }
+
+    video.srcObject = stream;
+    try { await video.play(); } catch { /* autoplay with gesture is fine */ }
+    viewfinder.hidden = false;
+    document.getElementById('camera-placeholder').hidden = true;
+    startBtn.hidden = true;
+    document.getElementById('stopBtn').hidden = false;
+    // Mirrored by default — this page is used mostly on laptops, whose
+    // cameras face the user and read naturally mirrored. The toggle
+    // below unmirrors for the rare rear-camera case.
+    setMirrored(true);
+    document.getElementById('mirrorBtn').hidden = false;
+    setStatus('Put QR code in front of camera…');
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const formats = await BarcodeDetector.getSupportedFormats().catch(() => ['qr_code']);
+        if (formats.includes('qr_code')) {
+          scanNative(new BarcodeDetector({ formats: ['qr_code'] }));
+          return;
+        }
+      } catch { /* fall through to jsQR */ }
+    }
+    if (await loadJsQr()) { scanJsQr(); return; }
+    setStatus('This browser can’t scan QR codes — try Chrome or Edge.', true);
+    stream.getTracks().forEach(t => t.stop());
+  }
+
+  function setMirrored(on) {
+    video.classList.toggle('is-mirrored', on);
+    document.getElementById('mirrorBtn').classList.toggle('is-on', on);
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setStatus('This browser has no camera support — try Chrome, Edge or Safari.', true);
+    startBtn.disabled = true;
+  } else {
+    startBtn.addEventListener('click', start);
+    document.getElementById('stopBtn').addEventListener('click', stopCamera);
+    document.getElementById('mirrorBtn').addEventListener('click', () => {
+      setMirrored(!video.classList.contains('is-mirrored'));
+    });
+  }
+</script>
+
+    <footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-brand">
+      <img src="/images/pockit-logo.png" alt="Pockit" class="site-footer-logo">
+      <p>The smartphone-sized publisher.</p>
+    </div>
+
+    <nav class="site-footer-links" aria-label="Products">
+      <span class="site-footer-links-heading">Products</span>
+      <a href="/course/" class="">Course</a>
+      <a class="site-footer-link--soon">Note*</a>
+      <a class="site-footer-link--soon">Book*</a>
+      <span class="site-footer-soon-note">*Full reveal coming soon</span>
+    </nav>
+
+    <nav class="site-footer-links" aria-label="Company">
+      <span class="site-footer-links-heading">Company</span>
+      <a href="/about/" class="">About</a>
+      <a href="#modal-contact" data-modal-open="modal-contact">Contact</a>
+    </nav>
+  </div>
+
+  <div class="site-footer-bottom">
+    <p>&copy; 2026 Pockit. All rights reserved.</p>
+  </div>
+</footer>
+
+    
+<div id="modal-contact" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-contact-title" inert>
+    <div class="modal-content">
+        <button type="button" class="modal-close" aria-label="Close contact form">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M2 2l16 16M18 2L2 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="modal-scroll">
+            <div class="form-container">
+                <h2 id="modal-contact-title">Get in touch</h2>
+                <p class="form-subtitle">Got a question, or just want to say hello? I'll reply.</p>
+
+                <form class="formspree-form" action="https://formspree.io/f/mnpqkaql" method="POST">
+                    <div class="form-row">
+                        <div class="form-col">
+                            <input type="text" name="name" class="form-control" placeholder="Name" required>
+                        </div>
+                        <div class="form-col">
+                            <input type="email" name="email" class="form-control" placeholder="Email address" required>
+                        </div>
+                    </div>
+                    <div class="form-full">
+                        <textarea name="message" class="form-control" placeholder="Your message" rows="6" required></textarea>
+                    </div>
+                    <input type="hidden" name="_subject" value="Message received through pockit.works">
+                    <button type="submit" class="hero-cta">Send message</button>
+                    <p class="form-note">You're directly contacting <a href="https://ianallannz.github.io" target="_blank" rel="noopener">Ian Allan on the East Coast, New Zealand</a>.</p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <script src="/js/custom.js" defer></script>
+</body>
+
+</html>
