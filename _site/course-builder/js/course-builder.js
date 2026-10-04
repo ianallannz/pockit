@@ -5,6 +5,8 @@
 import {
   MIN_BLOCK_ROWS, BLOCK_TYPES, SMALLEST_BLOCK_ROWS,
   blockType, listCount, matrixEntryCount, matrixColumns,
+  tableRowCount, tableColCount,
+  insertTableRowAt, removeTableRowAt, insertTableColAt, removeTableColAt,
 } from './block-types.js';
 import {
   buildCard, configureRenderCard, renderMarkdown, paintPresentSlide,
@@ -2094,7 +2096,7 @@ function openTypePicker(cardId, anchor) {
   const free = freeRows(card);
 
   options.replaceChildren();
-  for (const type of BLOCK_TYPES) {
+  const buildOption = type => {
     const option = document.createElement('button');
     option.className = 'type-option';
     option.title = type.label;
@@ -2107,7 +2109,22 @@ function openTypePicker(cardId, anchor) {
       closeTypePicker();
       addBlock(cardId, type.id);
     });
-    options.appendChild(option);
+    return option;
+  };
+  // Two headed groups in one panel, each in BLOCK_TYPES order — everything
+  // ungroupless lands in content; reflection/rating/list/matrix carry
+  // group: 'reflection' (see block-types.js).
+  for (const [label, match] of [
+    ['Add content', type => type.group !== 'reflection'],
+    ['Add reflection', type => type.group === 'reflection'],
+  ]) {
+    const types = BLOCK_TYPES.filter(match);
+    if (!types.length) continue;
+    const heading = document.createElement('h3');
+    heading.className = 'type-group-heading';
+    heading.textContent = label;
+    options.appendChild(heading);
+    for (const type of types) options.appendChild(buildOption(type));
   }
 
   backdrop.hidden = false;
@@ -2350,6 +2367,56 @@ function changeMatrixColumns(block, card, delta) {
     ? [...columns, { caption: '' }]
     : columns.slice(0, nextCount);
   if (block.h < neededRows) block.h = neededRows;
+  save();
+  render();
+}
+
+// buildMatrixStepper/buildMatrixEditor/buildKeyIdeaEditor now live in
+// render-card.js alongside buildBlockContent().
+
+// Table rows/columns are added and removed positionally from the hover
+// edge controls (see buildTableEditor()): insert lands a blank row/column
+// AT the index, remove takes exactly the indexed one. Minimums refuse
+// outright; row inserts additionally grow the block itself when its current
+// height can't fit the new row count (header + data rows). Columns never
+// need a free row — the table just shares its width.
+function insertTableRow(block, card, index) {
+  const type = blockType('table');
+  const current = tableRowCount(block);
+  if (current >= type.maxN) return;
+
+  const neededRows = 1 + current + 1;
+  if (neededRows > block.h + freeRows(card)) return;
+
+  insertTableRowAt(block, index);
+  if (block.h < neededRows) block.h = neededRows;
+  save();
+  render();
+}
+
+function removeTableRow(block, card, index) {
+  const type = blockType('table');
+  if (tableRowCount(block) <= type.minN) return;
+
+  removeTableRowAt(block, index);
+  save();
+  render();
+}
+
+function insertTableCol(block, card, index) {
+  const type = blockType('table');
+  if (tableColCount(block) >= type.maxCols) return;
+
+  insertTableColAt(block, index);
+  save();
+  render();
+}
+
+function removeTableCol(block, card, index) {
+  const type = blockType('table');
+  if (tableColCount(block) <= type.minCols) return;
+
+  removeTableColAt(block, index);
   save();
   render();
 }
@@ -2780,6 +2847,8 @@ function minRowsFor(block) {
   // 1 prompt row + 1 table-header row (item/rating headers) + one row per
   // item entry + one legend line per rating column.
   if (block.type === 'matrix') return 2 + matrixEntryCount(block) + matrixColumns(block).length;
+  // 1 header row + one row per data row — no prompt, no legend.
+  if (block.type === 'table') return 1 + tableRowCount(block);
   return blockType(block.type)?.minRows ?? MIN_BLOCK_ROWS;
 }
 
@@ -2911,7 +2980,10 @@ function makeResizable(blockEl, card, block) {
     event.preventDefault();
     event.stopPropagation();
 
-    const minRows = minRowsFor(block);
+    // Table blocks resize freely (see freeResize): the floor is the
+    // absolute minimum, and any overflow clips (see .card-block-table) —
+    // the author sizes the box, not the row count.
+    const minRows = blockType(block.type)?.freeResize ? MIN_BLOCK_ROWS : minRowsFor(block);
     const maxRows = block.h + freeRows(card);
     // Measured rather than assumed, so it survives browser zoom.
     const pxPerRow = blockEl.getBoundingClientRect().height / block.h;
@@ -4552,6 +4624,7 @@ configureRenderCard({
   save, render, removeBlock, openTypePicker,
   makeBlockDraggable, makeResizable, makeBlockDropTarget,
   changeListCount, changeMatrixEntries, changeMatrixColumns,
+  insertTableRow, removeTableRow, insertTableCol, removeTableCol,
   openImageEditor, openLinkEditor, uploadImage, resolveImageSrc,
 });
 

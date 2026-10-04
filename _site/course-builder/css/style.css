@@ -3654,6 +3654,221 @@ div.card-block-list-prompt.is-empty { color: #c0c0c0; }
   gap: 0.5mm;
 }
 
+/* ── Table (header + data rows, markdown in every cell) ── */
+/* Not boxed like Reflection (no inset container) — but with its own #666
+   grid rules, the header row reading by weight on top of that. Toolbar
+   hover-revealed like Matrix's own. */
+.card-block-table {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+  /* Same inset as Text/Heading at the sides, plus a matching top inset
+     so the grid never touches the card edges — see
+     .card-block-markdown/.card-block-line. */
+  padding: var(--card-pad) var(--card-pad) 0;
+  /* Free-resizeable blocks (see freeResize) may be dragged smaller than
+     their content — clip instead of spilling into the next block. */
+  overflow: hidden;
+}
+
+/* Positioning context for the overlay edge controls and column-resize
+   handles below — without this they anchor to .card instead of the table
+   and land in the wrong place entirely. */
+.card-block-table-grid-wrap {
+  position: relative;
+}
+
+table.card-block-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border-top: 0.2mm solid #666;
+  border-left: 0.2mm solid #666;
+}
+
+.card-block-table-grid th,
+.card-block-table-grid td {
+  position: relative;
+  min-width: 0;
+  border-right: 0.2mm solid #666;
+  border-bottom: 0.2mm solid #666;
+  padding: 0.4mm 1mm;
+  vertical-align: top;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 8pt;
+  /* Tighter than the card-wide rhythm (see --card-line): table copy —
+     bullets especially — reads better packed slightly denser. Scoped to
+     table cells only; every other content type is untouched. */
+  line-height: calc(var(--card-line) * 0.9);
+  color: #000;
+}
+
+/* Hover edge controls: tiny round buttons overlaid just inside a cell
+   edge — + left (rows) / − right (rows) per row, + top / − bottom per
+   column. display:none by default, so print (no hover) and the locked
+   viewer (no pointer) never see them; everything stays inside cell
+   bounds because the card itself clips (overflow:hidden). */
+.card-block-table-ctrl {
+  position: absolute;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  color: #444;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+  padding: 0;
+}
+
+.card-block-table-ctrl:hover {
+  color: #111;
+  border-color: var(--brand-green);
+}
+
+.card-block-table-ctrl.is-plus-row {
+  left: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.card-block-table-ctrl.is-minus-row {
+  right: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.card-block-table-ctrl.is-plus-col {
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Alignment cycler: same top edge and size as the column +, parked 20px
+   left of its centre (14px button + 6px gap), so the pair reads as one
+   row. Its icon draws the current state. */
+.card-block-table-ctrl.is-align-col {
+  top: 1px;
+  transform: translateX(-50%);
+}
+
+.card-block-table-ctrl.is-align-col svg {
+  width: 10px;
+  height: 10px;
+  display: block;
+}
+
+.card-block-table-ctrl.is-minus-col {
+  transform: translate(-50%, -50%);
+}
+
+/* One shared set of buttons per table, placed by the hover handler in
+   buildTableEditor() — no CSS :hover reveal (the buttons no longer live
+   in cells, so there is nothing for a selector to key off). display:none
+   until placed: print (no hover) and the locked viewer (no pointer)
+   never see them. */
+.card-block-table-ctrl:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.card-block-table-ctrl:disabled:hover { color: #444; border-color: #ccc; }
+
+/* Column-resize handles: a wide transparent grab zone straddling each
+   inner vertical grid line (the line itself is only 0.2mm — unhittable),
+   full table height, with a green marker that appears on hover/drag.
+   display:none until the hover handler places them: print (no hover) and
+   the locked viewer (no pointer) never see them. */
+.card-block-table-resize {
+  position: absolute;
+  top: 0;
+  width: 9px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  display: none;
+  z-index: 2;
+  touch-action: none;
+}
+
+.card-block-table-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.card-block-table-resize:hover::after,
+.card-block-table-resize.is-dragging::after {
+  background: var(--brand-green);
+}
+
+/* Headers align left like the cells and render at normal weight — a <th>
+   is centred AND bold by browser default, so both have to be explicitly
+   unset; emphasis is then purely the author's call via markdown.
+   Per-column alignment rides inline on each cell and wins where set. */
+.card-block-table-grid th { font-weight: 400; text-align: left; }
+
+/* Text-like markdown cells: rendered preview until clicked, matching the
+   Text block's own preview/edit interaction one level down. */
+.card-block-table-preview { min-height: var(--card-line); cursor: text; }
+.card-block-table-preview p { margin: 0; }
+/* Custom markers replace the native ones so the marker-to-text gap is ours
+   to set (no UA stylesheet lets you size that gap): the marker is pinned
+   at the cell edge with the text hanging 2.5mm off it — snug, with wrapped
+   lines aligning under the text, not the marker. Native markers would hang
+   out at the grid line; narrow cells leave no gutter for them. */
+.card-block-table-preview :is(ul, ol) {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+.card-block-table-preview ol { counter-reset: table-cell-ol; }
+.card-block-table-preview :is(ul, ol) > li {
+  position: relative;
+  padding-left: 2.5mm;
+}
+/* A little air between bullets — adjacent-sibling only, so no trailing
+   space appears under the last one. */
+.card-block-table-preview :is(ul, ol) > li + li {
+  margin-top: 0.5mm;
+}
+.card-block-table-preview :is(ul, ol) > li::before {
+  position: absolute;
+  left: 0;
+  content: '•';
+}
+.card-block-table-preview ol > li { counter-increment: table-cell-ol; }
+.card-block-table-preview ol > li::before {
+  content: counter(table-cell-ol) '.';
+}
+
+/* Inherits the cell's own type (textareas don't by default) — same reason
+   the preview above redeclares nothing and just lives in the cell. */
+.card-block-table-editor {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
 .card-block-matrix-caption {
   border: none;
   outline: none;
@@ -4246,6 +4461,20 @@ div.card-block-list-prompt.is-empty { color: #c0c0c0; }
      its own row instead of growing the picker wider. */
   max-width: calc(4 * 62px + 3 * 6px);
 }
+
+/* Group headings inside the tile flow — full-row, same 11px uppercase
+   treatment as the panel's own h2 above. Second group gets breathing room
+   above it; the first sits flush under the h2. */
+.type-group-heading {
+  flex: 0 0 100%;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #777;
+  margin: 0 0 4px;
+}
+
+.type-group-heading:not(:first-child) { margin-top: 8px; }
 
 .type-option {
   display: flex;

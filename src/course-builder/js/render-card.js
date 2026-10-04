@@ -32,7 +32,7 @@
 //      listener can never fire in the first place (the viewer's entire
 //      use of this module). course-builder.js configures real
 //      implementations once, for its own interactive: true (default) use.
-import { blockType, listCount, matrixEntryCount, matrixColumns, MIN_BLOCK_ROWS, SMALLEST_BLOCK_ROWS } from './block-types.js';
+import { blockType, listCount, matrixEntryCount, matrixColumns, tableGrid, tableRowCount, tableColCount, tableColWidths, tableColAligns, nextTableAlign, serializeTableBody, MIN_BLOCK_ROWS, SMALLEST_BLOCK_ROWS } from './block-types.js';
 
 const GRID_PER_ROW = 2;
 const ROW_STEP = 1 / GRID_PER_ROW;
@@ -138,6 +138,10 @@ let hooks = {
   changeListCount: () => {},
   changeMatrixEntries: () => {},
   changeMatrixColumns: () => {},
+  insertTableRow: () => {},
+  removeTableRow: () => {},
+  insertTableCol: () => {},
+  removeTableCol: () => {},
   openImageEditor: () => {},
   openLinkEditor: () => {},
   uploadImage: async () => { throw new Error('uploadImage is not configured on this page.'); },
@@ -181,6 +185,10 @@ function makeBlockDropTarget(el, card, index) { hooks.makeBlockDropTarget(el, ca
 function changeListCount(block, card, delta) { hooks.changeListCount(block, card, delta); }
 function changeMatrixEntries(block, card, delta) { hooks.changeMatrixEntries(block, card, delta); }
 function changeMatrixColumns(block, card, delta) { hooks.changeMatrixColumns(block, card, delta); }
+function insertTableRow(block, card, index) { hooks.insertTableRow(block, card, index); }
+function removeTableRow(block, card, index) { hooks.removeTableRow(block, card, index); }
+function insertTableCol(block, card, index) { hooks.insertTableCol(block, card, index); }
+function removeTableCol(block, card, index) { hooks.removeTableCol(block, card, index); }
 function openImageEditor(block, anchor) { hooks.openImageEditor(block, anchor); }
 function openLinkEditor(block, anchor) { hooks.openLinkEditor(block, anchor); }
 function uploadImage(file) { return hooks.uploadImage(file); }
@@ -627,6 +635,363 @@ function buildMatrixEditor(block, type, card, params) {
   return wrap;
 }
 
+// One cell of a Table block: a Text-like markdown field — rendered preview
+// until clicked, then a textarea; typing writes straight back through the
+// grid into block.body (no re-render mid-type, same as Matrix's caption
+// inputs), blur commits and re-renders to show the fresh preview. `get`/
+// `set` close over the live grid arrays, so every keystroke lands in the
+// same structure the steppers below resize.
+function buildTableCell(tag, get, set) {
+  const cell = document.createElement(tag);
+  cell.className = 'card-block-table-cell';
+
+  const preview = document.createElement('div');
+  preview.className = 'card-block-table-preview';
+  preview.tabIndex = 0;
+  if (get()) {
+    preview.innerHTML = renderMarkdown(get());
+  } else {
+    preview.classList.add('is-empty');
+  }
+
+  const editor = document.createElement('textarea');
+  editor.className = 'card-block-table-editor';
+  editor.rows = 1;
+  editor.value = get() || '';
+  editor.spellcheck = false;
+  editor.hidden = true;
+
+  const grow = () => {
+    editor.style.height = 'auto';
+    editor.style.height = `${editor.scrollHeight}px`;
+  };
+  const enterEditing = () => {
+    preview.hidden = true;
+    editor.hidden = false;
+    editor.focus();
+    editor.setSelectionRange(editor.value.length, editor.value.length);
+    grow();
+  };
+  preview.addEventListener('click', enterEditing);
+  preview.addEventListener('focus', enterEditing);
+
+  editor.addEventListener('input', () => {
+    set(editor.value);
+    save();
+    grow();
+  });
+  editor.addEventListener('blur', () => {
+    set(editor.value);
+    save();
+    render();
+  });
+
+  cell.append(preview, editor);
+  return cell;
+}
+
+// One overlay edge control: a tiny round button positioned against the
+// tableWrap below in JS (not anchored in cells — position:relative on
+// table cells is unreliable across browsers, which can hide the controls
+// entirely). display:none until a hover places it, so print (no hover)
+// and the locked viewer (no pointer) never see it. Everything stays
+// inside table bounds: the card itself clips (overflow:hidden).
+// mousedown is swallowed so clicking a control never blurs a cell editor
+// mid-type — without this, the blur's re-render would detach the button
+// before its own click ever fires.
+function buildTableControl(label, positionClass, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `card-block-table-ctrl ${positionClass}`;
+  button.textContent = label;
+  button.style.display = 'none';
+  button.addEventListener('mousedown', event => event.preventDefault());
+  button.addEventListener('click', event => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+// A markdown table with its own grid rules — one header row plus data
+// rows, stored as markdown syntax in block.body (see block-types.js).
+// Rows/columns are added and removed positionally, right where they
+// belong: hovering a row rides + (left edge, inserts below) and − (right
+// edge, removes that row) along it; hovering the header rides + above a
+// column (inserts right of it); hovering a last-row cell rides − below
+// its column. One shared set of four buttons per table, repositioned onto
+// the hovered row/column — and always shown while hovering, disabled with
+// a reason when gated (maximums, minimums, or a full card), so the
+// controls are discoverable rather than mysteriously absent.
+function buildTableEditor(block, type, card, params) {
+  const wrap = document.createElement('div');
+  wrap.className = 'card-block-table';
+
+  const grid = tableGrid(block);
+  const rowCount = tableRowCount(block);
+  const colCount = tableColCount(block);
+  const rows = grid.rows.slice(0, rowCount).map(row => row.slice(0, colCount));
+  const header = grid.header.slice(0, colCount);
+  const aligns = tableColAligns(block, colCount);
+  const free = freeRows(card, params);
+
+  const rowFull = 1 + (rowCount + 1) > block.h + free;
+  const canAddRow = rowCount < type.maxN && !rowFull;
+  const canRemoveRow = rowCount > type.minN;
+  const canAddCol = colCount < type.maxCols;
+  const canRemoveCol = colCount > type.minCols;
+
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'card-block-table-grid-wrap';
+
+  const table = document.createElement('table');
+  table.className = 'card-block-table-grid';
+
+  // Relative column weights (see tableColWidths()) as real column widths —
+  // table-layout: fixed below divides the table width exactly this way, on
+  // screen, in print and in the viewer alike.
+  const colWidths = tableColWidths(block, colCount);
+  const colTotal = colWidths.reduce((a, b) => a + b, 0);
+  const colgroup = document.createElement('colgroup');
+  const colEls = colWidths.map(weight => {
+    const col = document.createElement('col');
+    col.style.width = `${(weight / colTotal) * 100}%`;
+    colgroup.appendChild(col);
+    return col;
+  });
+  table.appendChild(colgroup);
+
+  const applyColWidths = weights => {
+    const total = weights.reduce((a, b) => a + b, 0);
+    weights.forEach((weight, i) => {
+      colEls[i].style.width = `${(weight / total) * 100}%`;
+    });
+  };
+
+  const headRow = document.createElement('tr');
+  headRow.className = 'card-block-table-head-row';
+  header.forEach((_, c) => {
+    const th = buildTableCell(
+      'th',
+      () => grid.header[c],
+      value => { grid.header[c] = value; block.body = serializeTableBody(grid); }
+    );
+    th.classList.add('is-header');
+    th.style.textAlign = aligns[c];
+    headRow.appendChild(th);
+  });
+  const thead = document.createElement('thead');
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  rows.forEach((row, r) => {
+    const tr = document.createElement('tr');
+    row.forEach((_, c) => {
+      const td = buildTableCell(
+        'td',
+        () => grid.rows[r][c],
+        value => { grid.rows[r][c] = value; block.body = serializeTableBody(grid); }
+      );
+      td.style.textAlign = aligns[c];
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+
+  // Three bars that sit where the text sits — left, centred or right — so
+  // the alignment control shows the column's current state, not a static
+  // glyph. currentColor inherits the button's own colour.
+  const tableAlignIcon = align => {
+    const bars = align === 'center'
+      ? [[1, 10], [3, 6], [2, 8]]
+      : align === 'right'
+        ? [[1, 10], [5, 6], [3, 8]]
+        : [[1, 10], [1, 6], [1, 8]];
+    const rects = bars
+      .map(([x, w], i) => `<rect x="${x}" y="${1 + i * 4}" width="${w}" height="2"/>`)
+      .join('');
+    return `<svg viewBox="0 0 12 12" aria-hidden="true"><g fill="currentColor">${rects}</g></svg>`;
+  };
+
+  // The overlay controls, placed by the hover handler below. Indices ride
+  // in `pending` because the same buttons serve every row/column.
+  const pending = { rowPlus: 0, rowMinus: 0, colPlus: 0, colMinus: 0, colAlign: 0 };
+  const rowPlus = buildTableControl('+', 'is-plus-row',
+    () => insertTableRow(block, card, pending.rowPlus));
+  const rowMinus = buildTableControl('−', 'is-minus-row',
+    () => removeTableRow(block, card, pending.rowMinus));
+  const colPlus = buildTableControl('+', 'is-plus-col',
+    () => insertTableCol(block, card, pending.colPlus));
+  const colMinus = buildTableControl('−', 'is-minus-col',
+    () => removeTableCol(block, card, pending.colMinus));
+  // Alignment cycler: sits left of the column + control, shows the current
+  // alignment as its icon, and steps left -> center -> right -> left on
+  // each click. Ungated (it edits an existing column, never grows the
+  // table), so it shows on every header hover.
+  const colAlign = buildTableControl('', 'is-align-col', () => {
+    const current = tableColAligns(block, colCount);
+    current[pending.colAlign] = nextTableAlign(current[pending.colAlign]);
+    block.align = [...current];
+    save();
+    render();
+  });
+  const controls = [rowPlus, rowMinus, colPlus, colMinus, colAlign];
+  tableWrap.append(rowPlus, rowMinus, colPlus, colMinus, colAlign);
+
+  // Drag handles on every inner vertical grid line (one per boundary, so
+  // colCount - 1): a wide transparent grab zone straddling the line with a
+  // green marker that appears on hover. Dragging borrows width from the
+  // neighbour, keeping the pair's total — the table never changes size.
+  const TABLE_MIN_COL_MM = 10;
+  const resizeHandles = [];
+  for (let c = 0; c < colCount - 1; c++) {
+    const handle = document.createElement('div');
+    handle.className = 'card-block-table-resize';
+    handle.title = 'Drag to resize columns';
+    tableWrap.appendChild(handle);
+    resizeHandles.push(handle);
+
+    handle.addEventListener('pointerdown', event => {
+      // Swallowed like the edge controls above: clicking mid-type must not
+      // blur the cell editor (whose re-render would detach this handle
+      // before the drag even starts).
+      event.preventDefault();
+      event.stopPropagation();
+
+      const weights = tableColWidths(block, colCount);
+      const tablePx = table.getBoundingClientRect().width;
+      const pairTotal = weights[c] + weights[c + 1];
+      // Table spans the padded block width: card width minus both insets.
+      const tableMm = params.cardWidth - params.gridSize;
+      const minWeight = (TABLE_MIN_COL_MM / tableMm) * pairTotal;
+      const pxPerWeight = tablePx / pairTotal;
+      const startX = event.clientX;
+      const startLeft = weights[c];
+      handle.classList.add('is-dragging');
+      try { handle.setPointerCapture(event.pointerId); } catch { /* no active pointer */ }
+
+      const onMove = moveEvent => {
+        const deltaWeight = (moveEvent.clientX - startX) / pxPerWeight;
+        const left = Math.min(Math.max(startLeft + deltaWeight, minWeight), pairTotal - minWeight);
+        weights[c] = left;
+        weights[c + 1] = pairTotal - left;
+        applyColWidths(weights);
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        handle.classList.remove('is-dragging');
+        block.widths = [...weights];
+        save();
+        render();
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    });
+  }
+
+  const hideTableControls = () => {
+    for (const button of controls) button.style.display = 'none';
+    for (const handle of resizeHandles) handle.style.display = 'none';
+  };
+
+  const showTableControl = (button, positionPx, enabled, title) => {
+    button.style.top = positionPx.top !== undefined ? `${positionPx.top}px` : '';
+    button.style.left = positionPx.left !== undefined ? `${positionPx.left}px` : '';
+    button.disabled = !enabled;
+    button.title = title;
+    button.style.display = 'flex';
+  };
+
+  tableWrap.addEventListener('mouseover', event => {
+    // Moving onto a control or handle itself must keep everything where it
+    // is — both live directly under the wrap now, not inside cells, so
+    // without this guard the handler below would hide them out from under
+    // the pointer (and swallow the click/drag with them).
+    if (event.target.closest && event.target.closest('.card-block-table-ctrl, .card-block-table-resize')) return;
+    const cell = event.target.closest ? event.target.closest('th, td') : null;
+    if (!cell || !tableWrap.contains(cell)) {
+      hideTableControls();
+      return;
+    }
+    const tr = cell.parentElement;
+    const inHead = tr.parentElement.tagName === 'THEAD';
+    const r = tr.sectionRowIndex;
+    const c = cell.cellIndex;
+    const wrapRect = tableWrap.getBoundingClientRect();
+    const rowRect = tr.getBoundingClientRect();
+
+    // Row controls ride the hovered row's left/right edges — the header
+    // row's plus inserts the new row at the very top (index 0).
+    pending.rowPlus = inHead ? 0 : r + 1;
+    showTableControl(rowPlus, { top: rowRect.top - wrapRect.top + rowRect.height / 2 }, canAddRow,
+      canAddRow ? 'Add row below'
+        : rowCount >= type.maxN ? 'Already at maximum rows'
+        : 'Card is full — free a row to add another');
+    if (!inHead) {
+      pending.rowMinus = r;
+      showTableControl(rowMinus, { top: rowRect.top - wrapRect.top + rowRect.height / 2 }, canRemoveRow,
+        canRemoveRow ? 'Remove this row' : 'Already at minimum rows');
+    } else {
+      rowMinus.style.display = 'none';
+    }
+
+    // Column controls ride the hovered column's top/bottom edges — plus
+    // above the header (with the alignment cycler to its left), minus
+    // below the table at the last row's columns.
+    if (inHead) {
+      const cellRect = cell.getBoundingClientRect();
+      const centerX = cellRect.left - wrapRect.left + cellRect.width / 2;
+      // The pair straddles the column centre as a group: 14px buttons with
+      // a 4px gap, so each centre sits 9px either side of it.
+      pending.colPlus = c + 1;
+      showTableControl(colPlus, { left: centerX + 9 }, canAddCol,
+        canAddCol ? 'Add column to the right' : 'Already at maximum columns');
+      pending.colAlign = c;
+      colAlign.innerHTML = tableAlignIcon(aligns[c]);
+      showTableControl(colAlign, { left: centerX - 9 }, true,
+        `Column text alignment: ${aligns[c]} — click to change`);
+    } else {
+      colPlus.style.display = 'none';
+      colAlign.style.display = 'none';
+    }
+    if (!inHead && r === rowCount - 1) {
+      const cellRect = cell.getBoundingClientRect();
+      const tableRect = table.getBoundingClientRect();
+      pending.colMinus = c;
+      showTableControl(colMinus, {
+        left: cellRect.left - wrapRect.left + cellRect.width / 2,
+        top: tableRect.bottom - wrapRect.top,
+      }, canRemoveCol, canRemoveCol ? 'Remove this column' : 'Already at minimum columns');
+    } else {
+      colMinus.style.display = 'none';
+    }
+
+    // Resize handles ride every inner vertical grid line for as long as
+    // the pointer is anywhere over the table — positioned fresh each time
+    // (cell textareas grow while typing, so cached coordinates go stale).
+    const tableRect = table.getBoundingClientRect();
+    const headCells = table.querySelectorAll('thead th');
+    resizeHandles.forEach((handle, i) => {
+      const edge = headCells[i].getBoundingClientRect().right;
+      handle.style.left = `${edge - wrapRect.left}px`;
+      handle.style.top = `${tableRect.top - wrapRect.top}px`;
+      handle.style.height = `${tableRect.height}px`;
+      handle.style.display = 'block';
+    });
+  });
+  tableWrap.addEventListener('mouseleave', hideTableControls);
+
+  wrap.appendChild(tableWrap);
+
+  return wrap;
+}
+
 // A key idea/term, a Text-like markdown explanation, and a small citation
 // line. The explanation reuses buildMarkdownEditor wholesale (preview/edit
 // toggle, bold/italic/bullets) rather than reimplementing it — only the
@@ -979,6 +1344,7 @@ function buildBlockContent(block, type, card, params) {
     : type.editor === 'image' ? buildImageEditor(block, type)
     : type.editor === 'list' ? buildListEditor(block, type, card, params)
     : type.editor === 'matrix' ? buildMatrixEditor(block, type, card, params)
+    : type.editor === 'table' ? buildTableEditor(block, type, card, params)
     : type.editor === 'key-idea' ? buildKeyIdeaEditor(block, type)
     : type.editor === 'footnote' ? buildFootnoteEditor(block, type)
     : type.editor === 'quote' ? buildQuoteEditor(block, type)
@@ -1107,7 +1473,7 @@ export function buildCard(card, index, params, {
   if (interactive && free >= SMALLEST_BLOCK_ROWS) {
     const add = document.createElement('button');
     add.className = 'card-block-add';
-    add.title = 'Add content';
+    add.title = 'Add content or reflection';
     add.textContent = '+';
     add.style.height = `${Math.min(MIN_BLOCK_ROWS, free) * rowHeightMm(params)}mm`;
     add.addEventListener('click', () => openTypePicker(card.id, add));
