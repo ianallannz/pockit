@@ -288,10 +288,16 @@ eleventyExcludeFromCollections: true
     document.getElementById('camera-placeholder').hidden = true;
     startBtn.hidden = true;
     document.getElementById('stopBtn').hidden = false;
-    // Mirrored by default — this page is used mostly on laptops, whose
-    // cameras face the user and read naturally mirrored. The toggle
-    // below unmirrors for the rare rear-camera case.
-    setMirrored(true);
+    // Mirroring follows the device: laptops (fine pointer) face the user
+    // and read naturally mirrored, so mirror by default there; mobiles
+    // (coarse pointer) default to the rear camera, which must NOT be
+    // mirrored. userAgentData.mobile is the direct signal where supported
+    // (Chrome/Edge); coarse pointer is the fallback (Safari/Firefox).
+    // The toggle below still overrides either way.
+    const isMobile = typeof navigator.userAgentData?.mobile === 'boolean'
+      ? navigator.userAgentData.mobile
+      : window.matchMedia('(pointer: coarse)').matches;
+    setMirrored(!isMobile);
     document.getElementById('mirrorBtn').hidden = false;
     setStatus('Put QR code in front of camera…');
 
